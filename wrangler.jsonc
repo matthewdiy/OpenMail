@@ -8,8 +8,8 @@
  */
 {
 	"$schema": "node_modules/wrangler/config-schema.json",
-	"name": "holy-violet-03e5",
-	"main": ".open-next/worker.js",
+	"name": "openmail",
+	"main": "custom-worker.ts",
 	"compatibility_date": "2026-03-12",
 	"compatibility_flags": [
 		"nodejs_compat",
@@ -29,7 +29,20 @@
 			// Self-reference service binding, the service name must match the worker name
 			// see https://opennext.js.org/cloudflare/caching
 			"binding": "WORKER_SELF_REFERENCE",
-			"service": "holy-violet-03e5"
+			"service": "openmail"
+		}
+	],
+	"d1_databases": [
+		{
+			"binding": "MAIL_DB",
+			"database_name": "mail-db",
+			"database_id": "5e306c11-67a9-4449-b6d0-e5fabbd0913c"
+		}
+	],
+	"r2_buckets": [
+		{
+			"bucket_name": "mail-raw",
+			"binding": "MAIL_R2"
 		}
 	],
 	"observability": {
