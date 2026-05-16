@@ -1,7 +1,7 @@
 {
 	"$schema": "node_modules/wrangler/config-schema.json",
 	"name": "openmail-email",
-	"main": "src/email-worker.ts",
+	"main": "src/email-worker/worker.ts",
 	"compatibility_date": "2026-03-12",
 	"compatibility_flags": [
 		"nodejs_compat",

@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-	/* config options here */
+	serverExternalPackages: ["cloudflare:sockets", "worker-mailer"],
 };
 
 export default nextConfig;

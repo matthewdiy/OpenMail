@@ -4,6 +4,11 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+patchedDependencies:
+  '@opennextjs/cloudflare@1.17.1':
+    hash: h7jw4seoxmp7xxzjbmqgmkxb3a
+    path: patches/@opennextjs__cloudflare@1.17.1.patch
+
 importers:
 
   .:
@@ -19,7 +24,7 @@ importers:
         version: 1.2.13(@langchain/core@1.1.32(openai@6.31.0(ws@8.18.0)(zod@4.3.6))(ws@8.18.0))(ws@8.18.0)
       '@opennextjs/cloudflare':
         specifier: ^1.17.1
-        version: 1.17.1(next@16.1.5(react-dom@19.1.5(react@19.1.5))(react@19.1.5))(wrangler@4.73.0)
+        version: 1.17.1(patch_hash=h7jw4seoxmp7xxzjbmqgmkxb3a)(next@16.1.5(react-dom@19.1.5(react@19.1.5))(react@19.1.5))(wrangler@4.73.0)
       '@radix-ui/react-dropdown-menu':
         specifier: ^2.1.16
         version: 2.1.16(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.1.5(react@19.1.5))(react@19.1.5)
@@ -5933,7 +5938,7 @@ snapshots:
       - aws-crt
       - supports-color
 
-  '@opennextjs/cloudflare@1.17.1(next@16.1.5(react-dom@19.1.5(react@19.1.5))(react@19.1.5))(wrangler@4.73.0)':
+  '@opennextjs/cloudflare@1.17.1(patch_hash=h7jw4seoxmp7xxzjbmqgmkxb3a)(next@16.1.5(react-dom@19.1.5(react@19.1.5))(react@19.1.5))(wrangler@4.73.0)':
     dependencies:
       '@ast-grep/napi': 0.40.5
       '@dotenvx/dotenvx': 1.31.0

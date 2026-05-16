@@ -1,9 +1,8 @@
-import { getDb } from "./lib/db";
-import { emails, settings, userEmails } from "./lib/schema";
 import { and, eq, lt } from "drizzle-orm";
-import { ChatOpenAI } from "@langchain/openai";
-import { parseRawEmailBuffer, stripHtml } from "./lib/email-parser";
-
+import { parseRawEmailBuffer, stripHtml } from "../lib/email-parser";
+import { getDb } from "../lib/db";
+import { emails, settings, userEmails } from "../lib/schema";
+import { classifyEmail } from "./llm-classifier";
 
 function extractSnippet(rawText: string) {
 	const preview = rawText.replace(/\s+/g, " ").trim();
@@ -19,7 +18,7 @@ export async function email(
 	const receivedAt = new Date().toISOString();
 
 	const headers = message.headers;
-	const subject = headers.get("subject");
+	const rawSubject = headers.get("subject");
 	const messageId = headers.get("message-id");
 
 	const rawBuffer = await new Response(message.raw).arrayBuffer();
@@ -31,9 +30,21 @@ export async function email(
 	});
 
 	const previewText = new TextDecoder().decode(rawBuffer.slice(0, 50_000));
+	let from = message.from;
+	let to = message.to;
+	let subject = rawSubject;
 	let textSegment = previewText.split(/\r?\n\r?\n/).slice(1).join("\n\n").trim();
 	try {
 		const parsed = await parseRawEmailBuffer(rawBuffer);
+		if (parsed.from?.trim()) {
+			from = parsed.from.trim();
+		}
+		if (parsed.to?.trim()) {
+			to = parsed.to.trim();
+		}
+		if (parsed.subject?.trim()) {
+			subject = parsed.subject.trim();
+		}
 		const parsedText = parsed.text?.trim() || (parsed.html ? stripHtml(parsed.html) : "").trim();
 		if (parsedText) {
 			textSegment = parsedText;
@@ -44,7 +55,7 @@ export async function email(
 	const snippet = extractSnippet(textSegment);
 
 	const db = getDb(env);
-	const normalizedRecipient = message.to.trim().toLowerCase();
+	const normalizedRecipient = to.trim().toLowerCase();
 
 	const userEmailRows = await db
 		.select()
@@ -60,8 +71,8 @@ export async function email(
 			id,
 			userId: userAssocId,
 			message_id: messageId,
-			from_addr: message.from,
-			to_addr: message.to,
+			from_addr: from,
+			to_addr: to,
 			subject,
 			received_at: receivedAt,
 			r2_key: r2Key,
@@ -70,49 +81,28 @@ export async function email(
 		})
 		.run();
 
-
-	const settingRows = await db.select().from(settings).where(eq(settings.key, "email_categories")).limit(1).all();
+	const settingRows = await db
+		.select()
+		.from(settings)
+		.where(eq(settings.key, "email_categories"))
+		.limit(1)
+		.all();
 	const categories = settingRows[0] ? settingRows[0].value : "Inbox, Social, Promotion";
 
-	const model = new ChatOpenAI({
-		model: "@cf/zai-org/glm-4.7-flash",
-		topP: 0.05,
-		apiKey: process.env.CLOUDFLARE_AI_API_TOKEN,
-		configuration: {
-			baseURL: `https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_AI_ACCOUNT_ID}/ai/v1`,
-		},
-	});
-
-	const prompt = `Analyze the following email.
-Available Categories: [${categories}]
-
-Output format MUST be a strict JSON matching this structure:
-{
-  "verification_code": "STRING OR NULL (set it only if this is a verification email which provides a code)",
-  "summary": "STRING (1 short sentence describing the email)",
-  "category": "STRING (must be one of the available categories)"
-}
-
-Email Content:
-Subject: ${subject || "No Subject"}
-From: ${message.from}
-Body:
-${snippet || textSegment.slice(0, 1000)}
-`;
-	console.log(prompt)
-
 	try {
-		const response = await model.invoke(prompt);
-		const resultText = response.content as string;
-		const jsonMatch = resultText.match(/\{[\s\S]*\}/);
-		const jsonString = jsonMatch ? jsonMatch[0] : resultText;
-		const json = JSON.parse(jsonString);
-		console.log(json)
-		await db.update(emails)
+		const classification = await classifyEmail({
+			categories,
+			subject,
+			from,
+			body: textSegment.slice(0, 4000),
+		});
+		console.log(classification);
+		await db
+			.update(emails)
 			.set({
-				verification_code: json.verification_code || null,
-				summary: json.summary || null,
-				category: json.category || null,
+				verification_code: classification.verification_code,
+				summary: classification.summary,
+				category: classification.category,
 			})
 			.where(eq(emails.id, id))
 			.run();
@@ -123,9 +113,18 @@ ${snippet || textSegment.slice(0, 1000)}
 
 export default {
 	email,
-	scheduled: async (event: { cron: string; scheduledTime: number }, env: CloudflareEnv, ctx: ExecutionContext) => {
+	scheduled: async (
+		_event: { cron: string; scheduledTime: number },
+		env: CloudflareEnv,
+		_ctx: ExecutionContext
+	) => {
 		const db = getDb(env);
-		const settingRows = await db.select().from(settings).where(eq(settings.key, "trash_expire_days")).limit(1).all();
+		const settingRows = await db
+			.select()
+			.from(settings)
+			.where(eq(settings.key, "trash_expire_days"))
+			.limit(1)
+			.all();
 		const days = settingRows[0] ? parseInt(settingRows[0].value) : 30;
 
 		const thresholdDate = new Date();
@@ -140,5 +139,5 @@ export default {
 				)
 			)
 			.run();
-	}
+	},
 };

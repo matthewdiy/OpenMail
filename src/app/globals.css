@@ -18,6 +18,10 @@
 	--border: #262d4a;
 	--input: #2a3254;
 	--ring: #7c7bff;
+	--font-geist-sans:
+		"Inter", "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
+	--font-geist-mono:
+		"SFMono-Regular", "SF Mono", "Cascadia Code", "JetBrains Mono", Consolas, monospace;
 }
 
 @theme inline {

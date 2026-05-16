@@ -5,14 +5,18 @@
 	"packageManager": "pnpm@9.0.0",
 	"scripts": {
 		"dev": "next dev --port 10000",
-		"build": "next build",
+		"build": "next build --webpack",
 		"start": "next start",
 		"lint": "next lint",
 		"db:generate": "drizzle-kit generate --config ./drizzle.config.ts",
 		"db:migrate": "wrangler d1 migrations apply mail-db",
 		"db:remote:migrate": "wrangler d1 migrations apply mail-db --remote",
 		"db-viewer": "drizzle-kit studio ",
+		"email-worker:build": "wrangler deploy --config ./wrangler.email.jsonc --dry-run",
 		"email-worker:dev": "wrangler dev --config ./wrangler.email.jsonc",
+		"email-worker:preview": "wrangler dev --config ./wrangler.email.jsonc --remote",
+		"email-worker:upload": "wrangler versions upload --config ./wrangler.email.jsonc",
+		"email-worker:deploy": "wrangler deploy --config ./wrangler.email.jsonc",
 		"deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
 		"upload": "opennextjs-cloudflare build && opennextjs-cloudflare upload",
 		"preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
@@ -57,5 +61,10 @@
 		"tailwindcss": "^4",
 		"typescript": "^5.7.4",
 		"wrangler": "^4.73.0"
+	},
+	"pnpm": {
+		"patchedDependencies": {
+			"@opennextjs/cloudflare@1.17.1": "patches/@opennextjs__cloudflare@1.17.1.patch"
+		}
 	}
 }
