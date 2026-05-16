@@ -8,9 +8,11 @@ import { user } from "@/lib/auth-schema";
 import { getDb } from "@/lib/db";
 import { userEmailQuotas } from "@/lib/schema";
 import { DEFAULT_EMAIL_ACCOUNT_QUOTA } from "@/lib/user-access";
-import { updateUserEmailQuotaAction } from "./actions";
+import { buildSystemConfigV1FromEnv, getSystemConfig } from "@/lib/system-config";
+import { updateMailSystemConfigAction, updateUserEmailQuotaAction } from "./actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { MailProviderConfigForm } from "./mail-provider-config-form";
 
 export const revalidate = 0;
 
@@ -25,6 +27,11 @@ export default async function AdminSettingsPage() {
 	}
 
 	const db = getDb();
+	const currentSystemConfig = await getSystemConfig();
+	const initialMailConfig = currentSystemConfig ?? buildSystemConfigV1FromEnv();
+	const sourceLabel = currentSystemConfig ? "D1 system_config" : "environment fallback preview";
+	const allowLocalProvider = process.env.NODE_ENV === "development";
+
 	const users = await db
 		.select({
 			id: user.id,
@@ -51,6 +58,13 @@ export default async function AdminSettingsPage() {
 			</div>
 
 			<div className="p-6 max-w-4xl flex flex-col gap-6">
+				<MailProviderConfigForm
+					initialConfig={initialMailConfig}
+					saveAction={updateMailSystemConfigAction}
+					sourceLabel={sourceLabel}
+					allowLocalProvider={allowLocalProvider}
+				/>
+
 				<div className="space-y-1">
 					<h2 className="text-lg font-medium">User Email Account Quotas</h2>
 					<p className="text-sm text-muted-foreground">

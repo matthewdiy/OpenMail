@@ -102,8 +102,17 @@ export const settings = sqliteTable("settings", {
 	value: text("value").notNull(),
 });
 
+export const systemConfig = sqliteTable("system_config", {
+	id: text("id").primaryKey(),
+	schemaVersion: integer("schema_version").notNull(),
+	payload: text("payload").notNull(),
+	updatedAt: text("updated_at").notNull(),
+	updatedBy: text("updated_by"),
+});
+
 export type EmailRow = typeof emails.$inferSelect;
 export type UserEmailRow = typeof userEmails.$inferSelect;
 export type UserEmailQuotaRow = typeof userEmailQuotas.$inferSelect;
 export type SentEmailRow = typeof sentEmails.$inferSelect;
 export type DraftEmailRow = typeof draftEmails.$inferSelect;
+export type SystemConfigRow = typeof systemConfig.$inferSelect;

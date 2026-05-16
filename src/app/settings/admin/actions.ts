@@ -6,6 +6,7 @@ import { getAuth } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import { userEmailQuotas } from "@/lib/schema";
 import { DEFAULT_EMAIL_ACCOUNT_QUOTA } from "@/lib/user-access";
+import { parseSystemConfigV1FormData, upsertSystemConfigV1 } from "@/lib/system-config";
 
 export async function updateUserEmailQuotaAction(formData: FormData) {
 	const reqHeaders = await headers();
@@ -41,4 +42,18 @@ export async function updateUserEmailQuotaAction(formData: FormData) {
 
 	revalidatePath("/settings/admin");
 	revalidatePath("/settings/accounts");
+}
+
+export async function updateMailSystemConfigAction(formData: FormData) {
+	const reqHeaders = await headers();
+	const session = await getAuth().api.getSession({ headers: reqHeaders });
+	if (!session) throw new Error("Unauthorized");
+	if (session.user.role !== "admin") {
+		throw new Error("Forbidden");
+	}
+
+	const config = parseSystemConfigV1FormData(formData);
+	await upsertSystemConfigV1(config, session.user.id);
+
+	revalidatePath("/settings/admin");
 }
