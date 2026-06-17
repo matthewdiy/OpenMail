@@ -8,11 +8,11 @@ import { user } from "@/lib/auth-schema";
 import { getDb } from "@/lib/db";
 import { userEmailQuotas } from "@/lib/schema";
 import { DEFAULT_EMAIL_ACCOUNT_QUOTA } from "@/lib/user-access";
-import { buildSystemConfigV1FromEnv, getSystemConfig } from "@/lib/system-config";
-import { updateMailSystemConfigAction, updateUserEmailQuotaAction } from "./actions";
+import { DEFAULT_SYSTEM_SETTINGS_V1, getSystemSettings } from "@/lib/system-settings";
+import { updateMailSystemSettingsAction, updateUserEmailQuotaAction } from "./actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { MailProviderConfigForm } from "./mail-provider-config-form";
+import { MailProviderSettingsForm } from "./mail-provider-settings-form";
 
 export const revalidate = 0;
 
@@ -27,9 +27,9 @@ export default async function AdminSettingsPage() {
 	}
 
 	const db = getDb();
-	const currentSystemConfig = await getSystemConfig();
-	const initialMailConfig = currentSystemConfig ?? buildSystemConfigV1FromEnv();
-	const sourceLabel = currentSystemConfig ? "D1 system_config" : "environment fallback preview";
+	const currentSystemSettings = await getSystemSettings();
+	const initialMailSettings = currentSystemSettings ?? DEFAULT_SYSTEM_SETTINGS_V1;
+	const sourceLabel = currentSystemSettings ? "D1 system_settings" : "not saved yet";
 	const allowLocalProvider = process.env.NODE_ENV === "development";
 
 	const users = await db
@@ -58,9 +58,9 @@ export default async function AdminSettingsPage() {
 			</div>
 
 			<div className="p-6 max-w-4xl flex flex-col gap-6">
-				<MailProviderConfigForm
-					initialConfig={initialMailConfig}
-					saveAction={updateMailSystemConfigAction}
+				<MailProviderSettingsForm
+					initialSettings={initialMailSettings}
+					saveAction={updateMailSystemSettingsAction}
 					sourceLabel={sourceLabel}
 					allowLocalProvider={allowLocalProvider}
 				/>

@@ -6,7 +6,7 @@ import { getAuth } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import { userEmailQuotas } from "@/lib/schema";
 import { DEFAULT_EMAIL_ACCOUNT_QUOTA } from "@/lib/user-access";
-import { parseSystemConfigV1FormData, upsertSystemConfigV1 } from "@/lib/system-config";
+import { parseSystemSettingsV1FormData, upsertSystemSettingsV1 } from "@/lib/system-settings";
 
 export async function updateUserEmailQuotaAction(formData: FormData) {
 	const reqHeaders = await headers();
@@ -44,7 +44,7 @@ export async function updateUserEmailQuotaAction(formData: FormData) {
 	revalidatePath("/settings/accounts");
 }
 
-export async function updateMailSystemConfigAction(formData: FormData) {
+export async function updateMailSystemSettingsAction(formData: FormData) {
 	const reqHeaders = await headers();
 	const session = await getAuth().api.getSession({ headers: reqHeaders });
 	if (!session) throw new Error("Unauthorized");
@@ -52,8 +52,8 @@ export async function updateMailSystemConfigAction(formData: FormData) {
 		throw new Error("Forbidden");
 	}
 
-	const config = parseSystemConfigV1FormData(formData);
-	await upsertSystemConfigV1(config, session.user.id);
+	const settings = parseSystemSettingsV1FormData(formData);
+	await upsertSystemSettingsV1(settings, session.user.id);
 
 	revalidatePath("/settings/admin");
 }

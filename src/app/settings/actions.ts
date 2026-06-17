@@ -1,28 +1,33 @@
 "use server";
-import { getDb } from "@/lib/db";
-import { settings } from "@/lib/schema";
-import { eq } from "drizzle-orm";
+import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
+import { getAuth } from "@/lib/auth";
+import { normalizeUserCategories, updateUserSettings } from "@/lib/user-settings";
+
+async function requireUserId() {
+	const reqHeaders = await headers();
+	const session = await getAuth().api.getSession({ headers: reqHeaders });
+	if (!session) throw new Error("Unauthorized");
+	return session.user.id;
+}
 
 export async function updateExpireSettingsAction(days: number) {
-	const db = getDb();
-	await db.insert(settings)
-		.values({ key: "trash_expire_days", value: days.toString() })
-		.onConflictDoUpdate({
-			target: settings.key,
-			set: { value: days.toString() }
-		})
-		.run();
+	const userId = await requireUserId();
+	await updateUserSettings(userId, {
+		mail: {
+			trashExpireDays: days,
+		},
+	});
 	revalidatePath("/settings");
 }
+
 export async function updateCategoriesAction(categories: string) {
-	const db = getDb();
-	await db.insert(settings)
-		.values({ key: "email_categories", value: categories })
-		.onConflictDoUpdate({
-			target: settings.key,
-			set: { value: categories }
-		})
-		.run();
+	const userId = await requireUserId();
+	await updateUserSettings(userId, {
+		mail: {
+			categories: normalizeUserCategories(categories.split(",")),
+		},
+	});
 	revalidatePath("/settings");
+	revalidatePath("/mail");
 }

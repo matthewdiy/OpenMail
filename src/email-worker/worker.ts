@@ -1,14 +1,17 @@
 import { and, eq, lt } from "drizzle-orm";
 import { parseRawEmailBuffer, stripHtml } from "../lib/email-parser";
 import { getDb } from "../lib/db";
-import { emails, settings, userEmails } from "../lib/schema";
+import { emails, userEmails } from "../lib/schema";
+import { DEFAULT_USER_SETTINGS, formatUserCategories, getUserSettings } from "../lib/user-settings";
 import { classifyEmail } from "./llm-classifier";
 
+/** Build a short plaintext preview for inbox lists and classifier context. */
 function extractSnippet(rawText: string) {
 	const preview = rawText.replace(/\s+/g, " ").trim();
 	return preview.length > 240 ? `${preview.slice(0, 237)}...` : preview;
 }
 
+/** Persist an incoming email, associate it to a user, then classify it asynchronously. */
 export async function email(
 	message: ForwardableEmailMessage,
 	env: CloudflareEnv,
@@ -23,6 +26,7 @@ export async function email(
 
 	const rawBuffer = await new Response(message.raw).arrayBuffer();
 	const r2Key = `emails/${id}.eml`;
+	// Keep the original RFC822 message so parsing/classification can be improved later.
 	await env.MAIL_R2.put(r2Key, rawBuffer, {
 		httpMetadata: {
 			contentType: "message/rfc822",
@@ -35,6 +39,7 @@ export async function email(
 	let subject = rawSubject;
 	let textSegment = previewText.split(/\r?\n\r?\n/).slice(1).join("\n\n").trim();
 	try {
+		// PostalMime gives cleaner addresses and bodies, but the worker can still store mail if it fails.
 		const parsed = await parseRawEmailBuffer(rawBuffer);
 		if (parsed.from?.trim()) {
 			from = parsed.from.trim();
@@ -57,6 +62,7 @@ export async function email(
 	const db = getDb(env);
 	const normalizedRecipient = to.trim().toLowerCase();
 
+	// User-owned aliases are stored lowercase, so normalize before lookup.
 	const userEmailRows = await db
 		.select()
 		.from(userEmails)
@@ -81,15 +87,12 @@ export async function email(
 		})
 		.run();
 
-	const settingRows = await db
-		.select()
-		.from(settings)
-		.where(eq(settings.key, "email_categories"))
-		.limit(1)
-		.all();
-	const categories = settingRows[0] ? settingRows[0].value : "Inbox, Social, Promotion";
+	const categories = userAssocId
+		? formatUserCategories((await getUserSettings(userAssocId, env)).mail.categories)
+		: formatUserCategories(DEFAULT_USER_SETTINGS.mail.categories);
 
 	try {
+		// Classification is best-effort; the stored email remains usable if the LLM call fails.
 		const classification = await classifyEmail({
 			categories,
 			subject,
@@ -113,19 +116,14 @@ export async function email(
 
 export default {
 	email,
+	/** Delete trashed messages after the configured retention window. */
 	scheduled: async (
 		_event: { cron: string; scheduledTime: number },
 		env: CloudflareEnv,
 		_ctx: ExecutionContext
 	) => {
 		const db = getDb(env);
-		const settingRows = await db
-			.select()
-			.from(settings)
-			.where(eq(settings.key, "trash_expire_days"))
-			.limit(1)
-			.all();
-		const days = settingRows[0] ? parseInt(settingRows[0].value) : 30;
+		const days = DEFAULT_USER_SETTINGS.mail.trashExpireDays; // TODO: expire days should be per user setting
 
 		const thresholdDate = new Date();
 		thresholdDate.setDate(thresholdDate.getDate() - days);

@@ -8,6 +8,7 @@
 		"build": "next build --webpack",
 		"start": "next start",
 		"lint": "next lint",
+		"auth:generate": "BETTER_AUTH_CLI=1 pnpm dlx auth@latest generate --config ./src/lib/auth.ts --output ./src/lib/auth-schema.ts --yes",
 		"db:generate": "drizzle-kit generate --config ./drizzle.config.ts",
 		"db:migrate": "wrangler d1 migrations apply mail-db",
 		"db:remote:migrate": "wrangler d1 migrations apply mail-db --remote",
@@ -60,7 +61,7 @@
 		"nodemailer": "^8.0.2",
 		"tailwindcss": "^4",
 		"typescript": "^5.7.4",
-		"wrangler": "^4.73.0"
+		"wrangler": "^4.101.0"
 	},
 	"pnpm": {
 		"patchedDependencies": {

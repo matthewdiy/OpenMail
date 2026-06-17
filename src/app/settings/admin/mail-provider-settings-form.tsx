@@ -10,34 +10,34 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import type { MailProvider, SystemConfigV1 } from "@/lib/system-config";
+import type { MailProvider, SystemSettingsV1 } from "@/lib/system-settings";
 
-interface MailProviderConfigFormProps {
-	initialConfig: SystemConfigV1;
+interface MailProviderSettingsFormProps {
+	initialSettings: SystemSettingsV1;
 	saveAction: (formData: FormData) => Promise<void>;
 	sourceLabel: string;
 	allowLocalProvider: boolean;
 }
 
-export function MailProviderConfigForm({
-	initialConfig,
+export function MailProviderSettingsForm({
+	initialSettings,
 	saveAction,
 	sourceLabel,
 	allowLocalProvider,
-}: MailProviderConfigFormProps) {
+}: MailProviderSettingsFormProps) {
 	const initialProvider: MailProvider =
-		!allowLocalProvider && initialConfig.mail.provider === "local"
+		!allowLocalProvider && initialSettings.mail.provider === "local"
 			? "smtp"
-			: initialConfig.mail.provider;
+			: initialSettings.mail.provider;
 	const [provider, setProvider] = useState<MailProvider>(initialProvider);
-	const [smtpSecure, setSmtpSecure] = useState(initialConfig.mail.smtp.secure ? "true" : "false");
+	const [smtpSecure, setSmtpSecure] = useState(initialSettings.mail.smtp.secure ? "true" : "false");
 
 	return (
 		<div className="rounded-lg border border-gray-200 p-4 dark:border-gray-800">
 			<div className="mb-4 space-y-1">
-				<h2 className="text-lg font-medium">Mail Provider Configuration</h2>
+				<h2 className="text-lg font-medium">Mail Provider Settings</h2>
 				<p className="text-sm text-muted-foreground">
-					System config source: <span className="font-medium">{sourceLabel}</span>
+					System settings source: <span className="font-medium">{sourceLabel}</span>
 				</p>
 				<p className="text-xs text-muted-foreground">
 					Credentials are stored in D1 plain text for this iteration.
@@ -70,11 +70,11 @@ export function MailProviderConfigForm({
 						<div className="grid grid-cols-1 gap-3 md:grid-cols-2">
 							<div className="flex flex-col gap-2">
 								<label className="text-sm font-medium" htmlFor="smtp_host">SMTP Host</label>
-								<Input id="smtp_host" name="smtp_host" defaultValue={initialConfig.mail.smtp.host} required />
+								<Input id="smtp_host" name="smtp_host" defaultValue={initialSettings.mail.smtp.host} required />
 							</div>
 							<div className="flex flex-col gap-2">
 								<label className="text-sm font-medium" htmlFor="smtp_port">SMTP Port</label>
-								<Input id="smtp_port" name="smtp_port" type="number" min={1} max={65535} defaultValue={initialConfig.mail.smtp.port} required />
+								<Input id="smtp_port" name="smtp_port" type="number" min={1} max={65535} defaultValue={initialSettings.mail.smtp.port} required />
 							</div>
 							<div className="flex flex-col gap-2">
 								<label className="text-sm font-medium">SMTP Secure</label>
@@ -91,11 +91,11 @@ export function MailProviderConfigForm({
 							</div>
 							<div className="flex flex-col gap-2">
 								<label className="text-sm font-medium" htmlFor="smtp_user">SMTP User</label>
-								<Input id="smtp_user" name="smtp_user" defaultValue={initialConfig.mail.smtp.user} required />
+								<Input id="smtp_user" name="smtp_user" defaultValue={initialSettings.mail.smtp.user} required />
 							</div>
 							<div className="flex flex-col gap-2">
 								<label className="text-sm font-medium" htmlFor="smtp_pass">SMTP Password</label>
-								<Input id="smtp_pass" name="smtp_pass" type="password" defaultValue={initialConfig.mail.smtp.pass} required />
+								<Input id="smtp_pass" name="smtp_pass" type="password" defaultValue={initialSettings.mail.smtp.pass} required />
 							</div>
 						</div>
 					</>
@@ -105,7 +105,7 @@ export function MailProviderConfigForm({
 					<div className="grid grid-cols-1 gap-3 md:grid-cols-2">
 						<div className="flex flex-col gap-2">
 							<label className="text-sm font-medium" htmlFor="resend_api_key">Resend API Key</label>
-							<Input id="resend_api_key" name="resend_api_key" type="password" defaultValue={initialConfig.mail.resend.apiKey} required />
+							<Input id="resend_api_key" name="resend_api_key" type="password" defaultValue={initialSettings.mail.resend.apiKey} required />
 						</div>
 					</div>
 				) : null}
@@ -114,12 +114,12 @@ export function MailProviderConfigForm({
 					<div className="grid grid-cols-1 gap-3 md:grid-cols-2">
 						<div className="flex flex-col gap-2">
 							<label className="text-sm font-medium" htmlFor="local_base_url">Local Worker Base URL (optional)</label>
-							<Input id="local_base_url" name="local_base_url" defaultValue={initialConfig.mail.local.baseUrl || ""} />
+							<Input id="local_base_url" name="local_base_url" defaultValue={initialSettings.mail.local.baseUrl || ""} />
 						</div>
 					</div>
 				) : null}
 
-				<Button type="submit" className="w-fit">Save Mail Provider Config</Button>
+				<Button type="submit" className="w-fit">Save Mail Provider Settings</Button>
 			</form>
 		</div>
 	);

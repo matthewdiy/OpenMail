@@ -1,13 +1,11 @@
 import Link from "next/link";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { eq } from "drizzle-orm";
 import { MoreVertical, RotateCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getAuth } from "@/lib/auth";
-import { getDb } from "@/lib/db";
-import { settings } from "@/lib/schema";
 import { cn } from "@/lib/utils";
+import { getUserSettings } from "@/lib/user-settings";
 import { EmailListPanel } from "@/components/mail/email-list-panel";
 import {
 	countInboxEmailsByAddress,
@@ -123,17 +121,8 @@ export default async function MailPage({
 
 	let availableCategories: string[] = [];
 	if (isInboxView) {
-		const db = getDb();
-		const categoryRows = await db
-			.select({ value: settings.value })
-			.from(settings)
-			.where(eq(settings.key, "email_categories"))
-			.limit(1)
-			.all();
-		const configuredCategories = (categoryRows[0]?.value ?? "")
-			.split(",")
-			.map((item) => item.trim())
-			.filter(Boolean);
+		const userSettings = await getUserSettings(session.user.id);
+		const configuredCategories = userSettings.mail.categories;
 		const discoveredCategories = await listDistinctInboxCategoriesByAddress(selectedEmail);
 		const seen = new Set<string>();
 		for (const category of [...configuredCategories, ...discoveredCategories]) {

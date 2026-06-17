@@ -6,6 +6,7 @@ import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { getDb } from "@/lib/db";
 import * as schema from "@/lib/auth-schema";
+import { DEFAULT_USER_SETTINGS_JSON } from "@/lib/user-settings-defaults";
 
 const adminEmail = process.env.ADMIN_EMAIL?.trim().toLowerCase();
 
@@ -45,6 +46,14 @@ export function createAuth() {
 			provider: "sqlite",
 			schema: schema,
 		}),
+		user: {
+			additionalFields: {
+				settings: {
+					type: "string",
+					required: false,
+				},
+			},
+		},
 		socialProviders: {
 			google: {
 				clientId: process.env.GOOGLE_CLIENT_ID ?? "",
@@ -59,6 +68,19 @@ export function createAuth() {
 			nextCookies(),
 		],
 		databaseHooks: {
+			user: {
+				create: {
+					before: async (user) => ({
+						data: {
+							...user,
+							settings:
+								typeof user.settings === "string"
+									? user.settings
+									: DEFAULT_USER_SETTINGS_JSON,
+						},
+					}),
+				},
+			},
 			session: {
 				create: {
 					before: async (session) => {

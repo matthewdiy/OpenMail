@@ -1,9 +1,8 @@
 import {
-	bootstrapSystemConfigFromEnvIfMissing,
-	buildSystemConfigV1FromEnv,
+	getSystemSettings,
 	type MailProvider,
-	type SystemConfigV1,
-} from "@/lib/system-config";
+	type SystemSettingsV1,
+} from "@/lib/system-settings";
 
 interface SendEmailParams {
 	to: string;
@@ -15,19 +14,19 @@ interface SendEmailParams {
 
 interface MailRuntimeConfig {
 	provider: MailProvider;
-	smtp: SystemConfigV1["mail"]["smtp"];
-	resend: SystemConfigV1["mail"]["resend"];
-	local: SystemConfigV1["mail"]["local"];
+	smtp: SystemSettingsV1["mail"]["smtp"];
+	resend: SystemSettingsV1["mail"]["resend"];
+	local: SystemSettingsV1["mail"]["local"];
 }
 
-async function sendWithResend(params: SendEmailParams, config: SystemConfigV1["mail"]["resend"]) {
+async function sendWithResend(params: SendEmailParams, config: SystemSettingsV1["mail"]["resend"]) {
 	const { to, subject, text, html, from } = params;
 	const apiKey = config.apiKey;
 	if (!apiKey) {
-		throw new Error("Resend API key is missing in system config / env fallback.");
+		throw new Error("Resend API key is missing in system settings.");
 	}
 
-	const defaultFrom = from?.email || process.env.SMTP_FROM || "onboarding@resend.dev";
+	const defaultFrom = from?.email || "onboarding@resend.dev";
 
 	const response = await fetch("https://api.resend.com/emails", {
 		method: "POST",
@@ -52,7 +51,7 @@ async function sendWithResend(params: SendEmailParams, config: SystemConfigV1["m
 	return await response.json();
 }
 
-async function sendWithSmtp(params: SendEmailParams, config: SystemConfigV1["mail"]["smtp"]) {
+async function sendWithSmtp(params: SendEmailParams, config: SystemSettingsV1["mail"]["smtp"]) {
 	const { to, subject, text, html, from } = params;
 
 	const defaultFrom = from || {
@@ -112,7 +111,7 @@ async function sendWithSmtp(params: SendEmailParams, config: SystemConfigV1["mai
 	}
 }
 
-async function sendWithLocalWorker(params: SendEmailParams, config: SystemConfigV1["mail"]["local"]) {
+async function sendWithLocalWorker(params: SendEmailParams, config: SystemSettingsV1["mail"]["local"]) {
 	const { to, subject, text, html, from } = params;
 	const baseUrl = config.baseUrl || "http://127.0.0.1:8787";
 	const fromAddr = from?.email || "test@local.dev";
@@ -155,26 +154,30 @@ ${html || text}
 }
 
 async function resolveMailRuntimeConfig(): Promise<MailRuntimeConfig> {
-	const systemConfig =
-		(await bootstrapSystemConfigFromEnvIfMissing()) ??
-		buildSystemConfigV1FromEnv();
+	const systemSettings = await getSystemSettings();
+	if (!systemSettings) {
+		throw new Error(
+			"System mail settings are not configured. Save mail provider settings in Admin Settings first."
+		);
+	}
+
 	const isDevMode = process.env.NODE_ENV === "development";
 	const provider =
-		!isDevMode && systemConfig.mail.provider === "local"
+		!isDevMode && systemSettings.mail.provider === "local"
 			? "smtp"
-			: systemConfig.mail.provider;
+			: systemSettings.mail.provider;
 
 	return {
 		provider,
-		smtp: systemConfig.mail.smtp,
-		resend: systemConfig.mail.resend,
-		local: systemConfig.mail.local,
+		smtp: systemSettings.mail.smtp,
+		resend: systemSettings.mail.resend,
+		local: systemSettings.mail.local,
 	};
 }
 
 /**
  * Sends an email using the configured provider.
- * Resolution order: D1 system config (bootstrapped from env if missing) -> env fallback.
+ * System mail settings must be saved in D1 before outbound mail can be sent.
  */
 export async function sendEmail(params: SendEmailParams) {
 	const config = await resolveMailRuntimeConfig();

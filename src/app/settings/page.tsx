@@ -1,6 +1,3 @@
-import { getDb } from "@/lib/db";
-import { settings } from "@/lib/schema";
-import { eq } from "drizzle-orm";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { updateExpireSettingsAction, updateCategoriesAction } from "./actions";
@@ -8,6 +5,7 @@ import { headers } from "next/headers";
 import { getAuth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { formatUserCategories, getUserSettings } from "@/lib/user-settings";
 
 export const revalidate = 0;
 
@@ -16,14 +14,10 @@ export default async function SettingsPage() {
 	const session = await getAuth().api.getSession({ headers: reqHeaders });
 	if (!session) redirect("/");
 
-	const db = getDb();
 	const isAdmin = session.user.role === "admin";
-
-	const rows = await db.select().from(settings).where(eq(settings.key, "trash_expire_days")).limit(1).all();
-	const currentExpireDays = rows[0] ? parseInt(rows[0].value) : 30;
-
-	const catRows = await db.select().from(settings).where(eq(settings.key, "email_categories")).limit(1).all();
-	const currentCategories = catRows[0] ? catRows[0].value : "Inbox, Social, Promotion";
+	const userSettings = await getUserSettings(session.user.id);
+	const currentExpireDays = userSettings.mail.trashExpireDays;
+	const currentCategories = formatUserCategories(userSettings.mail.categories);
 
 	async function handleSubmit(formData: FormData) {
 		"use server";
