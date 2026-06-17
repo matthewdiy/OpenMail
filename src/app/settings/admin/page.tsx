@@ -1,12 +1,11 @@
 import Link from "next/link";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
-import { asc, eq, isNull, ne, or } from "drizzle-orm";
+import { asc, isNull, ne, or } from "drizzle-orm";
 import { ArrowLeft } from "lucide-react";
 import { getAuth } from "@/lib/auth";
 import { user } from "@/lib/auth-schema";
 import { getDb } from "@/lib/db";
-import { userEmailQuotas } from "@/lib/schema";
 import { DEFAULT_EMAIL_ACCOUNT_QUOTA } from "@/lib/user-access";
 import { DEFAULT_SYSTEM_SETTINGS_V1, getSystemSettings } from "@/lib/system-settings";
 import { updateMailSystemSettingsAction, updateUserEmailQuotaAction } from "./actions";
@@ -38,10 +37,9 @@ export default async function AdminSettingsPage() {
 			name: user.name,
 			email: user.email,
 			role: user.role,
-			quota: userEmailQuotas.quota,
+			quota: user.email_quotas,
 		})
 		.from(user)
-		.leftJoin(userEmailQuotas, eq(user.id, userEmailQuotas.userId))
 		.where(or(ne(user.role, "admin"), isNull(user.role)))
 		.orderBy(asc(user.email))
 		.all();

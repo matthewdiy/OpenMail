@@ -52,6 +52,12 @@ export function createAuth() {
 					type: "string",
 					required: false,
 				},
+				emailQuotas: {
+					type: "number",
+					required: false,
+					fieldName: "email_quotas",
+					input: false,
+				},
 			},
 		},
 		socialProviders: {

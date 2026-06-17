@@ -1,10 +1,11 @@
 "use server";
 
+import { eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { getAuth } from "@/lib/auth";
+import { user } from "@/lib/auth-schema";
 import { getDb } from "@/lib/db";
-import { userEmailQuotas } from "@/lib/schema";
 import { DEFAULT_EMAIL_ACCOUNT_QUOTA } from "@/lib/user-access";
 import { parseSystemSettingsV1FormData, upsertSystemSettingsV1 } from "@/lib/system-settings";
 
@@ -25,19 +26,9 @@ export async function updateUserEmailQuotaAction(formData: FormData) {
 
 	const db = getDb();
 	await db
-		.insert(userEmailQuotas)
-		.values({
-			userId: targetUserId,
-			quota: rawQuota,
-			updatedAt: new Date().toISOString(),
-		})
-		.onConflictDoUpdate({
-			target: userEmailQuotas.userId,
-			set: {
-				quota: rawQuota,
-				updatedAt: new Date().toISOString(),
-			},
-		})
+		.update(user)
+		.set({ email_quotas: rawQuota, updatedAt: new Date() })
+		.where(eq(user.id, targetUserId))
 		.run();
 
 	revalidatePath("/settings/admin");

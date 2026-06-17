@@ -53,12 +53,6 @@ export const userEmails = sqliteTable("user_emails", {
 	createdAt: text("created_at").notNull(),
 });
 
-export const userEmailQuotas = sqliteTable("user_email_quotas", {
-	userId: text("user_id").primaryKey().references(() => user.id, { onDelete: "cascade" }),
-	quota: integer("quota").notNull(),
-	updatedAt: text("updated_at"),
-});
-
 export const sentEmails = sqliteTable(
 	"sent_emails",
 	{
@@ -107,7 +101,6 @@ export const systemSettings = sqliteTable("system_settings", {
 
 export type EmailRow = typeof emails.$inferSelect;
 export type UserEmailRow = typeof userEmails.$inferSelect;
-export type UserEmailQuotaRow = typeof userEmailQuotas.$inferSelect;
 export type SentEmailRow = typeof sentEmails.$inferSelect;
 export type DraftEmailRow = typeof draftEmails.$inferSelect;
 export type SystemSettingsRow = typeof systemSettings.$inferSelect;

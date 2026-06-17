@@ -21,6 +21,7 @@ export const user = sqliteTable("user", {
   banReason: text("ban_reason"),
   banExpires: integer("ban_expires", { mode: "timestamp_ms" }),
   settings: text("settings"),
+  email_quotas: integer("email_quotas"),
 });
 
 export const session = sqliteTable(
