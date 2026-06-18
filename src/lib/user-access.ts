@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { user } from "@/lib/auth-schema";
 import { getDb } from "@/lib/db";
 
-export const DEFAULT_EMAIL_ACCOUNT_QUOTA = 1;
+export const DEFAULT_EMAIL_ACCOUNT_QUOTA = 1; // TODO: default email quota should be set by admin in the system settings
 
 export async function getEmailAccountQuotaByUserId(userId: string) {
 	const db = getDb();

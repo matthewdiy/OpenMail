@@ -2,6 +2,7 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
 import { admin } from "better-auth/plugins/admin";
+import { apiKey } from "@better-auth/api-key";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { getDb } from "@/lib/db";
@@ -70,6 +71,22 @@ export function createAuth() {
 			admin({
 				defaultRole: "user",
 				adminRoles: ["admin"],
+			}),
+			apiKey({
+				enableSessionForAPIKeys: true,
+				customAPIKeyGetter: (ctx) => {
+					const explicitKey = ctx.headers?.get("x-api-key")?.trim();
+					if (explicitKey) return explicitKey;
+
+					const authorization = ctx.headers?.get("authorization")?.trim();
+					const match = authorization?.match(/^Bearer\s+(.+)$/i);
+					return match?.[1]?.trim() ?? null;
+				},
+				rateLimit: {
+					enabled: true,
+					timeWindow: 60 * 1000,
+					maxRequests: 120,
+				},
 			}),
 			nextCookies(),
 		],

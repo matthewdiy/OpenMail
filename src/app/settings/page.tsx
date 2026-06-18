@@ -45,6 +45,13 @@ export default async function SettingsPage() {
 							<Link href="/settings/accounts">Manage Email Accounts</Link>
 						</Button>
 					</div>
+					<div className="space-y-1 mb-2 pb-6 border-b border-gray-100 dark:border-gray-800">
+						<h2 className="text-lg font-medium">API Keys</h2>
+						<p className="text-sm text-muted-foreground mb-4">Create keys for scripts and external integrations.</p>
+						<Button asChild variant="outline">
+							<Link href="/settings/apikey">Manage API Keys</Link>
+						</Button>
+					</div>
 					{isAdmin ? (
 						<div className="space-y-1 mb-2 pb-6 border-b border-gray-100 dark:border-gray-800">
 							<h2 className="text-lg font-medium">Admin Controls</h2>
