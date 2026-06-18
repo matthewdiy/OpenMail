@@ -7,10 +7,19 @@ export type LinkEmailAddressOptions = {
 	userId: string;
 	emailAddress: string;
 	isAdmin?: boolean;
+	temporary?: boolean;
+	expireDay?: number;
 };
 
 export function normalizeEmailAddress(emailAddress: string) {
 	return emailAddress.trim().toLowerCase();
+}
+
+function buildExpiredDate(temporary: boolean | undefined, expireDay: number | undefined) {
+	if (!temporary) return null;
+	const expiresAt = new Date();
+	expiresAt.setDate(expiresAt.getDate() + (expireDay ?? 1));
+	return expiresAt.toISOString();
 }
 
 /** Link a receiving address after checking uniqueness and user quota. */
@@ -18,11 +27,18 @@ export async function linkEmailAddressForUser({
 	userId,
 	emailAddress,
 	isAdmin = false,
+	temporary = false,
+	expireDay,
 }: LinkEmailAddressOptions) {
 	const normalizedEmail = normalizeEmailAddress(emailAddress);
 	if (!normalizedEmail) {
 		throw new Error("Email address is required.");
 	}
+	const resolvedExpireDay = expireDay ?? 1;
+	if (temporary && (!Number.isInteger(resolvedExpireDay) || resolvedExpireDay <= 0)) {
+		throw new Error("Expire day must be a positive integer.");
+	}
+	const expiredDate = buildExpiredDate(temporary, resolvedExpireDay);
 
 	const db = getDb();
 	const existingRows = await db
@@ -58,6 +74,7 @@ export async function linkEmailAddressForUser({
 			userId,
 			emailAddress: normalizedEmail,
 			createdAt: new Date().toISOString(),
+			expiredDate,
 		})
 		.onConflictDoNothing()
 		.run();
@@ -72,7 +89,7 @@ export async function linkEmailAddressForUser({
 		throw new Error("This email address is already in use.");
 	}
 
-	return normalizedEmail;
+	return { emailAddress: normalizedEmail, expiredDate };
 }
 
 /** Unlink only addresses currently owned by the user. */

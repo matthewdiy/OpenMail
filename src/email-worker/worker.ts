@@ -3,6 +3,7 @@ import { parseRawEmailBuffer, stripHtml } from "../lib/email-parser";
 import { getDb } from "../lib/db";
 import { emails, userEmails } from "../lib/schema";
 import { DEFAULT_USER_SETTINGS, formatUserCategories, getUserSettings } from "../lib/user-settings";
+import { cleanupExpiredEmailAddresses } from "./expired-address-cleanup";
 import { classifyEmail } from "./llm-classifier";
 
 /** Build a short plaintext preview for inbox lists and classifier context. */
@@ -137,5 +138,6 @@ export default {
 				)
 			)
 			.run();
+		await cleanupExpiredEmailAddresses(db, env);
 	},
 };

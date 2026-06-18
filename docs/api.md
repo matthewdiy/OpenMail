@@ -109,13 +109,33 @@ Request:
 }
 ```
 
-Links a receiving address to the API key owner. The same uniqueness and quota policy as `/settings/accounts` applies.
+Temporary address request:
+
+```json
+{
+	"emailAddress": "temp@example.com",
+	"temporary": true,
+	"expireDay": 3
+}
+```
+
+Links a receiving address to the API key owner. The same uniqueness and quota policy as `/settings/accounts` applies. Set `temporary` to `true` to unlink the address automatically and delete inbound mail for that address after it expires. `expireDay` is optional for temporary addresses and defaults to `1`; it must be a positive integer.
 
 Response:
 
 ```json
 {
-	"emailAddress": "user@example.com"
+	"emailAddress": "user@example.com",
+	"expiredDate": null
+}
+```
+
+Temporary response:
+
+```json
+{
+	"emailAddress": "temp@example.com",
+	"expiredDate": "2026-06-20T10:00:00.000Z"
 }
 ```
 

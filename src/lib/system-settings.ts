@@ -5,7 +5,7 @@ import { getDb } from "@/lib/db";
 import { systemSettings } from "@/lib/schema";
 
 export const GLOBAL_SYSTEM_SETTINGS_ID = "global";
-export const CURRENT_SYSTEM_SETTINGS_VERSION = 1;
+export const CURRENT_SYSTEM_SETTINGS_VERSION = 2;
 
 export const MailProviderSchema = z.enum(["smtp", "resend", "local"]);
 export type MailProvider = z.infer<typeof MailProviderSchema>;
@@ -56,12 +56,40 @@ const localSettingsSchema = z.object({
 	baseUrl: z.string().optional(),
 });
 
+const emailDomainSchema = z
+	.string()
+	.trim()
+	.toLowerCase()
+	.transform((domain) => domain.replace(/^@+/, ""))
+	.refine(
+		(domain) =>
+			/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$/.test(
+				domain
+			),
+		"Enter a valid email domain."
+	);
+
+/** Normalize admin-entered receiving domains into unique domain suffixes. */
+export function normalizeEmailDomains(input: string | string[] | undefined) {
+	const rawValues = Array.isArray(input) ? input : input?.split(/[\n,]+/) ?? [];
+	const domains: string[] = [];
+	for (const value of rawValues) {
+		const result = emailDomainSchema.safeParse(value);
+		if (result.success) {
+			domains.push(result.data);
+		}
+	}
+
+	return Array.from(new Set(domains));
+}
+
 export const SystemSettingsV1Schema = z.object({
 	mail: z.object({
 		provider: MailProviderSchema,
 		smtp: smtpSettingsSchema,
 		resend: resendSettingsSchema,
 		local: localSettingsSchema,
+		emailDomains: z.array(emailDomainSchema),
 	}),
 });
 
@@ -83,6 +111,7 @@ export const DEFAULT_SYSTEM_SETTINGS_V1: SystemSettingsV1 = {
 		local: {
 			baseUrl: DEFAULT_LOCAL_WORKER_URL,
 		},
+		emailDomains: [],
 	},
 };
 
@@ -94,7 +123,24 @@ type MigratedSystemSettings = {
 
 type SystemSettingsMigrator = (payload: unknown) => unknown;
 
-const SYSTEM_SETTINGS_MIGRATORS: Partial<Record<number, SystemSettingsMigrator>> = {};
+const SYSTEM_SETTINGS_MIGRATORS: Partial<Record<number, SystemSettingsMigrator>> = {
+	1: (payload) => {
+		const existingPayload = z
+			.object({
+				mail: z.object({}).passthrough(),
+			})
+			.passthrough()
+			.parse(payload);
+
+		return {
+			...existingPayload,
+			mail: {
+				...existingPayload.mail,
+				emailDomains: [],
+			},
+		};
+	},
+};
 
 const storedSettingsRowSchema = z.object({
 	schemaVersion: z.number().int().min(1),
@@ -128,6 +174,7 @@ const systemSettingsFormSchema = z
 			local: {
 				baseUrl: form.local_base_url,
 			},
+			emailDomains: [],
 		},
 	}))
 	.superRefine((settings, ctx) => {
@@ -139,6 +186,22 @@ const systemSettingsFormSchema = z
 			});
 		}
 	});
+
+const emailDomainsFormSchema = z
+	.object({
+		email_domains: textSchema,
+	})
+	.superRefine((form, ctx) => {
+		const rawEmailDomains = form.email_domains.trim();
+		if (rawEmailDomains && normalizeEmailDomains(form.email_domains).length === 0) {
+			ctx.addIssue({
+				code: "custom",
+				path: ["email_domains"],
+				message: "Enter at least one valid email domain.",
+			});
+		}
+	})
+	.transform((form) => normalizeEmailDomains(form.email_domains));
 
 /** Check whether the local worker mail provider can be selected. */
 function isLocalProviderAllowed() {
@@ -208,6 +271,11 @@ export function parseSystemSettingsV1(payload: unknown): SystemSettingsV1 | null
 /** Convert settings form data into the canonical v1 system settings shape. */
 export function parseSystemSettingsV1FormData(formData: FormData): SystemSettingsV1 {
 	return systemSettingsFormSchema.parse(Object.fromEntries(formData.entries()));
+}
+
+/** Convert domain settings form data into normalized email domains. */
+export function parseEmailDomainsFormData(formData: FormData): string[] {
+	return emailDomainsFormSchema.parse(Object.fromEntries(formData.entries()));
 }
 
 /** Upgrade a stored settings payload to the latest supported version. */

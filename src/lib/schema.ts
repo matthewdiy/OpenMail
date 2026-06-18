@@ -51,6 +51,7 @@ export const userEmails = sqliteTable("user_emails", {
 	userId: text("user_id").notNull().references(() => user.id, { onDelete: "cascade" }),
 	emailAddress: text("email_address").primaryKey(),
 	createdAt: text("created_at").notNull(),
+	expiredDate: text("expired_date"),
 });
 
 export const sentEmails = sqliteTable(

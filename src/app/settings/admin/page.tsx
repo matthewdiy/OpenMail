@@ -8,9 +8,14 @@ import { user } from "@/lib/auth-schema";
 import { getDb } from "@/lib/db";
 import { DEFAULT_EMAIL_ACCOUNT_QUOTA } from "@/lib/user-access";
 import { DEFAULT_SYSTEM_SETTINGS_V1, getSystemSettings } from "@/lib/system-settings";
-import { updateMailSystemSettingsAction, updateUserEmailQuotaAction } from "./actions";
+import {
+	updateEmailDomainSettingsAction,
+	updateMailSystemSettingsAction,
+	updateUserEmailQuotaAction,
+} from "./actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DomainSettingsForm } from "./domain-settings-form";
 import { MailProviderSettingsForm } from "./mail-provider-settings-form";
 
 export const revalidate = 0;
@@ -61,6 +66,11 @@ export default async function AdminSettingsPage() {
 					saveAction={updateMailSystemSettingsAction}
 					sourceLabel={sourceLabel}
 					allowLocalProvider={allowLocalProvider}
+				/>
+
+				<DomainSettingsForm
+					initialSettings={initialMailSettings}
+					saveAction={updateEmailDomainSettingsAction}
 				/>
 
 				<div className="space-y-1">

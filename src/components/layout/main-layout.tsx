@@ -137,7 +137,7 @@ export function MainLayout({ children, userName, userEmail, userImage, userEmail
 				</aside>
 
 				{/* Main Content Pane */}
-				<main className="flex-1 overflow-hidden m-2 ml-0 rounded-2xl bg-white shadow-sm dark:bg-[#14151a] border border-gray-100 dark:border-gray-900">
+				<main className="flex-1 overflow-y-auto overflow-x-hidden m-2 ml-0 rounded-2xl bg-white shadow-sm dark:bg-[#14151a] border border-gray-100 dark:border-gray-900">
 					{children}
 				</main>
 			</div>

@@ -1,6 +1,7 @@
 import { getDb } from "@/lib/db";
 import { userEmails } from "@/lib/schema";
 import { eq } from "drizzle-orm";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { addEmailAccountAction, deleteEmailAccountAction } from "./actions";
@@ -12,13 +13,36 @@ import Link from "next/link";
 
 export const revalidate = 0;
 
-export default async function AccountsPage() {
+type AccountsPageProps = {
+	searchParams: Promise<{
+		hideTmp?: string | string[];
+	}>;
+};
+
+function getParamValue(value?: string | string[]) {
+	if (!value) return undefined;
+	return Array.isArray(value) ? value[0] : value;
+}
+
+function formatExpiryDate(value: string) {
+	const date = new Date(value);
+	if (Number.isNaN(date.getTime())) return value;
+	return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
+export default async function AccountsPage({ searchParams }: AccountsPageProps) {
 	const reqHeaders = await headers();
 	const session = await getAuth().api.getSession({ headers: reqHeaders });
 	if (!session) redirect("/");
 
 	const db = getDb();
 	const accounts = await db.select().from(userEmails).where(eq(userEmails.userId, session.user.id)).all();
+	const resolvedSearchParams = await searchParams;
+	const hideTemporary = getParamValue(resolvedSearchParams.hideTmp) === "1";
+	const temporaryCount = accounts.filter((account) => Boolean(account.expiredDate)).length;
+	const visibleAccounts = hideTemporary
+		? accounts.filter((account) => !account.expiredDate)
+		: accounts;
 
 	async function handleAdd(formData: FormData) {
 		"use server";
@@ -48,9 +72,18 @@ export default async function AccountsPage() {
 			</div>
 
 			<div className="p-6 max-w-2xl flex flex-col gap-8">
-				<div className="space-y-1">
-					<h2 className="text-lg font-medium">Linked Email Addresses</h2>
-					<p className="text-sm text-muted-foreground">Manage the email addresses associated with your account. Incoming emails to these addresses will be routed to your inbox.</p>
+				<div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+					<div className="space-y-1">
+						<h2 className="text-lg font-medium">Linked Email Addresses</h2>
+						<p className="text-sm text-muted-foreground">Manage the email addresses associated with your account. Incoming emails to these addresses will be routed to your inbox.</p>
+					</div>
+					{temporaryCount > 0 ? (
+						<Button asChild variant="outline" size="sm" className="w-fit shrink-0">
+							<Link href={hideTemporary ? "/settings/accounts" : "/settings/accounts?hideTmp=1"}>
+								{hideTemporary ? "Show temporary" : "Hide temporary"}
+							</Link>
+						</Button>
+					) : null}
 				</div>
 
 					<div className="border border-gray-200 dark:border-gray-800 rounded-lg overflow-hidden">
@@ -61,11 +94,30 @@ export default async function AccountsPage() {
 									<Link href="/onboard">Set up your first email</Link>
 								</Button>
 							</div>
+						) : visibleAccounts.length === 0 ? (
+							<div className="p-4 py-8 text-sm text-muted-foreground text-center space-y-3">
+								<p>All linked addresses are temporary and currently hidden.</p>
+								<Button asChild size="sm" variant="outline">
+									<Link href="/settings/accounts">Show temporary addresses</Link>
+								</Button>
+							</div>
 						) : (
 						<div className="flex flex-col">
-							{accounts.map(account => (
+							{visibleAccounts.map(account => (
 								<div key={account.emailAddress} className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-800 last:border-0 hover:bg-gray-50 dark:hover:bg-neutral-900/40">
-									<div className="text-sm font-medium">{account.emailAddress}</div>
+									<div className="min-w-0">
+										<div className="flex flex-wrap items-center gap-2">
+											<div className="break-all text-sm font-medium">{account.emailAddress}</div>
+											{account.expiredDate ? (
+												<Badge variant="secondary" className="shrink-0">Temporary</Badge>
+											) : null}
+										</div>
+										{account.expiredDate ? (
+											<div className="mt-1 text-xs text-muted-foreground">
+												Expires {formatExpiryDate(account.expiredDate)}
+											</div>
+										) : null}
+									</div>
 									<form action={handleDelete}>
 										<input type="hidden" name="emailAddress" value={account.emailAddress} />
 										<Button type="submit" variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30">

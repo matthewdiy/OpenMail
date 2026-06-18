@@ -1,0 +1,1 @@
+ALTER TABLE `user_emails` ADD `expired_date` text;
