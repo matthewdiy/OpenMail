@@ -17,6 +17,7 @@ export const emails = sqliteTable(
 		starred: integer("starred", { mode: "boolean" }).default(false).notNull(),
 		deleted: integer("deleted", { mode: "boolean" }).default(false).notNull(),
 		deleted_at: text("deleted_at"),
+		trashExpiredDate: text("trash_expired_date"),
 		read: integer("read", { mode: "boolean" }).default(false).notNull(),
 		verification_code: text("verification_code"),
 		summary: text("summary"),
@@ -43,6 +44,10 @@ export const emails = sqliteTable(
 		deletedDeletedAtIdx: index("emails_deleted_deleted_at_idx").on(
 			table.deleted,
 			table.deleted_at
+		),
+		deletedTrashExpiredIdx: index("emails_deleted_trash_expired_idx").on(
+			table.deleted,
+			table.trashExpiredDate
 		),
 	})
 );

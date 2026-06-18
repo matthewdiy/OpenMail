@@ -1,9 +1,10 @@
-import { and, eq, lt } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { parseRawEmailBuffer, stripHtml } from "../lib/email-parser";
 import { getDb } from "../lib/db";
 import { emails, userEmails } from "../lib/schema";
 import { DEFAULT_USER_SETTINGS, formatUserCategories, getUserSettings } from "../lib/user-settings";
 import { cleanupExpiredEmailAddresses } from "./expired-address-cleanup";
+import { cleanupExpiredTrashEmails } from "./trash-cleanup";
 import { classifyEmail } from "./llm-classifier";
 
 /** Build a short plaintext preview for inbox lists and classifier context. */
@@ -117,27 +118,14 @@ export async function email(
 
 export default {
 	email,
-	/** Delete trashed messages after the configured retention window. */
+	/** Run scheduled retention jobs for trashed mail and temporary addresses. */
 	scheduled: async (
 		_event: { cron: string; scheduledTime: number },
 		env: CloudflareEnv,
 		_ctx: ExecutionContext
 	) => {
 		const db = getDb(env);
-		const days = DEFAULT_USER_SETTINGS.mail.trashExpireDays; // TODO: expire days should be per user setting
-
-		const thresholdDate = new Date();
-		thresholdDate.setDate(thresholdDate.getDate() - days);
-
-		await db
-			.delete(emails)
-			.where(
-				and(
-					eq(emails.deleted, true),
-					lt(emails.deleted_at, thresholdDate.toISOString())
-				)
-			)
-			.run();
+		await cleanupExpiredTrashEmails(db, env);
 		await cleanupExpiredEmailAddresses(db, env);
 	},
 };

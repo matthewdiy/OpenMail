@@ -6,6 +6,13 @@ import { revalidatePath } from "next/cache";
 import { sendEmail } from "@/lib/mailer";
 import { getAuth } from "@/lib/auth";
 import { headers } from "next/headers";
+import { getUserSettings } from "@/lib/user-settings";
+
+function buildTrashExpiredDate(trashExpireDays: number) {
+	const expiresAt = new Date();
+	expiresAt.setDate(expiresAt.getDate() + trashExpireDays);
+	return expiresAt.toISOString();
+}
 
 export async function toggleStarAction(emailId: string, starred: boolean) {
 	const reqHeaders = await headers();
@@ -26,9 +33,13 @@ export async function toggleDeleteAction(emailId: string, deleted: boolean) {
 	if (!session) throw new Error("Unauthorized");
 
 	const db = getDb();
-	const deletedAt = !deleted ? new Date().toISOString() : null;
+	const nextDeleted = !deleted;
+	const deletedAt = nextDeleted ? new Date().toISOString() : null;
+	const trashExpiredDate = nextDeleted
+		? buildTrashExpiredDate((await getUserSettings(session.user.id)).mail.trashExpireDays)
+		: null;
 	await db.update(emails)
-		.set({ deleted: !deleted, deleted_at: deletedAt })
+		.set({ deleted: nextDeleted, deleted_at: deletedAt, trashExpiredDate })
 		.where(and(eq(emails.id, emailId), eq(emails.userId, session.user.id)))
 		.run();
 	revalidatePath("/mail");
@@ -54,8 +65,11 @@ export async function softDeleteManyEmailsAction(emailIds: string[]) {
 	if (emailIds.length === 0) return;
 
 	const db = getDb();
+	const trashExpiredDate = buildTrashExpiredDate(
+		(await getUserSettings(session.user.id)).mail.trashExpireDays
+	);
 	await db.update(emails)
-		.set({ deleted: true, deleted_at: new Date().toISOString() })
+		.set({ deleted: true, deleted_at: new Date().toISOString(), trashExpiredDate })
 		.where(and(eq(emails.userId, session.user.id), inArray(emails.id, emailIds)))
 		.run();
 	revalidatePath("/mail");

@@ -157,6 +157,7 @@ export async function listSentEmailsByAddress(
 		starred: false,
 		deleted: false,
 		deleted_at: null,
+		trashExpiredDate: null,
 		read: true,
 		verification_code: null,
 		summary: null,
