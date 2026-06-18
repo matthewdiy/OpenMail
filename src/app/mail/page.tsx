@@ -7,6 +7,7 @@ import { getAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 import { getUserSettings } from "@/lib/user-settings";
 import { EmailListPanel } from "@/components/mail/email-list-panel";
+import { RefreshButton } from "@/components/mail/refresh-button";
 import {
 	countInboxEmailsByAddress,
 	countSentEmailsByAddress,
@@ -154,11 +155,9 @@ export default async function MailPage({
 
 	return (
 		<>
-			<div className="flex h-12 items-center justify-between border-b border-gray-100 px-4 py-2 dark:border-gray-800">
+			<div className="flex h-12 items-center justify-between border-b border-border px-4 py-2">
 				<div className="flex items-center gap-3">
-					<Button variant="ghost" size="icon" className="h-8 w-8 rounded-full">
-						<RotateCw className="h-4 w-4" />
-					</Button>
+					<RefreshButton />
 					<Button variant="ghost" size="icon" className="h-8 w-8 rounded-full">
 						<MoreVertical className="h-4 w-4" />
 					</Button>
@@ -182,7 +181,7 @@ export default async function MailPage({
 									key={draft.id}
 									href={detailHref}
 									className={cn(
-										"group flex items-center gap-3 border-b border-gray-100 px-4 py-2.5 text-sm transition-colors hover:bg-neutral-100/80 dark:border-gray-800 dark:hover:bg-neutral-900/40 relative"
+										"group flex items-center gap-3 border-b border-border px-4 py-2.5 text-sm transition-colors hover:bg-accent relative"
 									)}
 								>
 									<div className="w-48 truncate text-red-600 dark:text-red-400">
@@ -190,17 +189,17 @@ export default async function MailPage({
 									</div>
 
 									<div className="flex-1 truncate flex items-center gap-2">
-										<span className="text-gray-700 dark:text-gray-300">
+										<span className="text-foreground">
 											{draft.subject || "(no subject)"}
 										</span>
 										{(draft.text || draft.to_addr) && (
-											<span className="text-gray-400 font-normal truncate">
+											<span className="text-muted-foreground font-normal truncate">
 												- {draft.to_addr ? `To: ${draft.to_addr}` : draft.text || ""}
 											</span>
 										)}
 									</div>
 
-									<div className="text-xs text-gray-400 ml-4 whitespace-nowrap">
+									<div className="text-xs text-muted-foreground ml-4 whitespace-nowrap">
 										{formatDate(draft.updated_at)}
 									</div>
 								</Link>

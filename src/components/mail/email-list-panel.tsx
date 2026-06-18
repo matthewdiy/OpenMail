@@ -151,7 +151,7 @@ export function EmailListPanel({
 
 	return (
 		<>
-			<div className="flex h-12 items-center justify-between border-b border-gray-100 px-4 py-2 dark:border-gray-800">
+			<div className="flex h-12 items-center justify-between border-b border-border px-4 py-2">
 				<div className="flex items-center gap-2">
 					<input
 						ref={overallCheckboxRef}
@@ -171,7 +171,7 @@ export function EmailListPanel({
 							<Button
 								variant="ghost"
 								size="icon"
-								className="h-8 w-8 rounded-full text-gray-500 hover:text-black"
+								className="h-8 w-8 rounded-full text-muted-foreground hover:text-foreground"
 								disabled={isPending}
 								onClick={handleBulkDelete}
 								aria-label={isTrashFilter ? "Permanently delete selected emails" : "Delete selected emails"}
@@ -182,7 +182,7 @@ export function EmailListPanel({
 								<Button
 									variant="ghost"
 									size="icon"
-									className="h-8 w-8 rounded-full text-gray-500 hover:text-black"
+									className="h-8 w-8 rounded-full text-muted-foreground hover:text-foreground"
 									disabled={isPending}
 									onClick={handleBulkReadToggle}
 									aria-label={shouldMarkAsRead ? "Mark selected as read" : "Mark selected as unread"}
@@ -192,7 +192,7 @@ export function EmailListPanel({
 							) : null}
 						</>
 					) : null}
-					<Button variant="ghost" size="icon" className="h-8 w-8 rounded-full">
+					<Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => router.refresh()} title="Refresh">
 						<RotateCw className="h-4 w-4" />
 					</Button>
 					<Button variant="ghost" size="icon" className="h-8 w-8 rounded-full">
@@ -228,7 +228,7 @@ export function EmailListPanel({
 
 			<div className="h-[calc(100%-48px)] overflow-y-auto">
 				{isInboxView ? (
-					<div className="border-b border-gray-100 px-4 py-2 dark:border-gray-800">
+					<div className="border-b border-border px-4 py-2">
 						<div className="overflow-x-auto">
 							<div className="flex min-w-max items-center gap-2">
 								<Link
@@ -277,9 +277,9 @@ export function EmailListPanel({
 									key={email.id}
 									href={detailHref}
 									className={cn(
-										"group flex items-center gap-3 border-b border-gray-100 px-4 py-2.5 text-sm transition-colors hover:bg-neutral-100/80 dark:border-gray-800 dark:hover:bg-neutral-900/40 relative",
-										!email.read && "font-semibold bg-[#f4f8fb] dark:bg-[#1a212d]",
-										email.read && "text-neutral-500 dark:text-neutral-400 opacity-85"
+										"group flex items-center gap-3 border-b border-border px-4 py-2.5 text-sm transition-colors hover:bg-accent relative",
+										!email.read && "font-semibold bg-background",
+										email.read && "text-muted-foreground opacity-85"
 									)}
 								>
 									<div className="flex items-center gap-2 z-10">
@@ -309,14 +309,14 @@ export function EmailListPanel({
 												{email.category}
 											</span>
 										)}
-										<span className={cn(showNew ? "text-[#1f1f1f] dark:text-[#e3e3e3]" : "text-gray-600 dark:text-gray-300")}>
+										<span className={cn(showNew ? "text-foreground" : "text-muted-foreground")}>
 											{email.subject || "(no subject)"}
 										</span>
 										{email.verification_code ? (
 											<VerificationBadge code={email.verification_code} />
 										) : (
 											(email.summary || email.snippet) && (
-												<span className="text-gray-400 font-normal truncate">
+												<span className="text-muted-foreground font-normal truncate">
 													- {email.summary || email.snippet}
 												</span>
 											)
@@ -324,8 +324,8 @@ export function EmailListPanel({
 									</div>
 
 									{!isSentFilter ? (
-										<div className="absolute right-16 top-1/2 -translate-y-1/2 hidden group-hover:flex items-center gap-1 bg-neutral-100/90 p-1 rounded-full px-2 dark:bg-neutral-900/90 z-10 backdrop-blur-sm">
-											<Button variant="ghost" size="icon" className="h-7 w-7 rounded-full text-gray-500 hover:text-black">
+										<div className="absolute right-16 top-1/2 -translate-y-1/2 hidden group-hover:flex items-center gap-1 bg-background/90 p-1 rounded-full px-2 z-10 backdrop-blur-sm">
+											<Button variant="ghost" size="icon" className="h-7 w-7 rounded-full text-muted-foreground hover:text-foreground">
 												<Archive className="h-4 w-4" />
 											</Button>
 											{isTrashFilter ? (
@@ -337,7 +337,7 @@ export function EmailListPanel({
 										</div>
 									) : null}
 
-									<div className="text-xs text-gray-400 ml-4 whitespace-nowrap group-hover:invisible">
+									<div className="text-xs text-muted-foreground ml-4 whitespace-nowrap group-hover:invisible">
 										{formatDate(email.received_at)}
 									</div>
 								</Link>
