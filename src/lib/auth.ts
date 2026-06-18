@@ -10,12 +10,63 @@ import * as schema from "@/lib/auth-schema";
 import { DEFAULT_USER_SETTINGS_JSON } from "@/lib/user-settings-defaults";
 
 const adminEmail = process.env.ADMIN_EMAIL?.trim().toLowerCase();
+const defaultAuthResendFrom = "OpenMail <onboarding@resend.dev>";
+
+export function isEmailPasswordLoginEnabled() {
+	const value = process.env.EMAIL_PASSWORD_LOGIN_ENABLED?.trim().toLowerCase();
+	return value === "true" || value === "1" || value === "yes" || value === "on";
+}
+
+export function isAuthResendVerificationEnabled() {
+	return Boolean(process.env.AUTH_RESEND_API_KEY?.trim());
+}
+
+export function getAuthResendFrom() {
+	return process.env.AUTH_RESEND_FROM?.trim() || defaultAuthResendFrom;
+}
 
 function getAuthDb() {
 	if (process.env.BETTER_AUTH_CLI) {
 		return drizzle({} as D1Database);
 	}
 	return getDb();
+}
+
+async function sendAuthVerificationEmail({
+	to,
+	url,
+}: {
+	to: string;
+	url: string;
+}) {
+	const apiKey = process.env.AUTH_RESEND_API_KEY?.trim();
+	if (!apiKey) {
+		throw new Error("AUTH_RESEND_API_KEY is required to send auth verification emails.");
+	}
+
+	const response = await fetch("https://api.resend.com/emails", {
+		method: "POST",
+		headers: {
+			Authorization: `Bearer ${apiKey}`,
+			"Content-Type": "application/json",
+		},
+		body: JSON.stringify({
+			from: getAuthResendFrom(),
+			to: [to],
+			subject: "Verify your OpenMail email address",
+			text: `Verify your OpenMail email address by opening this link: ${url}`,
+			html: [
+				"<p>Verify your OpenMail email address by opening this link:</p>",
+				`<p><a href="${url}">Verify email address</a></p>`,
+				`<p>If the button does not work, copy and paste this URL into your browser: ${url}</p>`,
+			].join(""),
+		}),
+	});
+
+	if (!response.ok) {
+		const errorText = await response.text();
+		throw new Error(`Resend auth email error: ${response.status} ${errorText}`);
+	}
 }
 
 async function ensureAdminRoleForUserId(userId: string) {
@@ -39,6 +90,8 @@ async function ensureAdminRoleForUserId(userId: string) {
 }
 
 export function createAuth() {
+	const authResendVerificationEnabled = isAuthResendVerificationEnabled();
+
 	return betterAuth({
 		appName: "OpenMail",
 		baseURL: process.env.BETTER_AUTH_URL,
@@ -67,6 +120,22 @@ export function createAuth() {
 				clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
 			},
 		},
+		emailAndPassword: {
+			enabled: isEmailPasswordLoginEnabled(),
+			requireEmailVerification: authResendVerificationEnabled,
+		},
+		emailVerification: authResendVerificationEnabled
+			? {
+				sendOnSignUp: true,
+				sendOnSignIn: true,
+				sendVerificationEmail: async ({ user, url }) => {
+					await sendAuthVerificationEmail({
+						to: user.email,
+						url,
+					});
+				},
+			}
+			: undefined,
 		plugins: [
 			admin({
 				defaultRole: "user",

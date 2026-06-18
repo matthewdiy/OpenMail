@@ -3,9 +3,13 @@ import { redirect } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
+import { EmailPasswordAuthForm } from "@/components/auth/email-password-auth-form";
 import { GoogleSignIn } from "@/components/auth/google-sign-in";
-import { getAuth } from "@/lib/auth";
+import {
+	getAuth,
+	isAuthResendVerificationEnabled,
+	isEmailPasswordLoginEnabled,
+} from "@/lib/auth";
 
 type HomePageProps = {
 	searchParams: Promise<{
@@ -35,6 +39,8 @@ export default async function Home({ searchParams }: HomePageProps) {
 	const initialError = errorParam
 		? "Sign-in failed. Please try again."
 		: null;
+	const enableEmailPasswordLogin = isEmailPasswordLoginEnabled();
+	const requireEmailVerification = isAuthResendVerificationEnabled();
 
 	return (
 		<div className="relative min-h-screen bg-background text-foreground overflow-hidden selection:bg-primary/20">
@@ -109,17 +115,16 @@ export default async function Home({ searchParams }: HomePageProps) {
 					<div className="absolute -inset-1 rounded-3xl bg-gradient-to-b from-primary/20 to-transparent opacity-50 blur-xl dark:from-primary/10" />
 					<Card className="relative overflow-hidden border-white/20 bg-background/60 backdrop-blur-2xl shadow-2xl rounded-3xl">
 						<div className="absolute inset-0 bg-gradient-to-br from-white/40 to-white/0 dark:from-white/5 dark:to-transparent pointer-events-none" />
-						<CardHeader className="space-y-3 pb-8 pt-10 px-10">
-							<CardTitle className="text-3xl font-bold tracking-tight">Sign in</CardTitle>
-							<CardDescription className="text-base">
-								Use your approved Google account to access the inbox.
-							</CardDescription>
-						</CardHeader>
-						<CardContent className="grid gap-8 px-10 pb-10">
-							<div className="relative z-10 group">
-								<GoogleSignIn initialError={initialError} />
-							</div>
-						</CardContent>
+						<div className="relative z-10">
+							{enableEmailPasswordLogin ? (
+								<EmailPasswordAuthForm
+									initialError={initialError}
+									requireEmailVerification={requireEmailVerification}
+								/>
+							) : (
+								<GoogleSignIn initialError={initialError} showHeader />
+							)}
+						</div>
 					</Card>
 				</section>
 			</div>
