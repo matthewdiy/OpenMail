@@ -26,6 +26,7 @@ type AuthMode = "sign-in" | "sign-up";
 type EmailPasswordAuthFormProps = {
 	initialError?: string | null;
 	requireEmailVerification?: boolean;
+	oauthProviders?: ("google" | "github")[];
 };
 
 function getAuthErrorMessage(error: unknown) {
@@ -41,6 +42,7 @@ function isEmailNotVerifiedMessage(message: string) {
 export function EmailPasswordAuthForm({
 	initialError,
 	requireEmailVerification = false,
+	oauthProviders = ["google"],
 }: EmailPasswordAuthFormProps) {
 	const [mode, setMode] = useState<AuthMode>("sign-in");
 	const [error, setError] = useState(initialError ?? "");
@@ -123,7 +125,7 @@ export function EmailPasswordAuthForm({
 				<CardDescription className="text-base">
 					{isSignUp
 						? "Enter your details below to set up your inbox workspace."
-						: "Use your email and password or continue with Google."}
+						: "Use your email and password or continue with social providers."}
 				</CardDescription>
 			</CardHeader>
 			<CardContent className="grid gap-8 px-10 pb-10">
@@ -293,15 +295,19 @@ export function EmailPasswordAuthForm({
 						</div>
 					) : null}
 
-					<div className="relative flex items-center my-1">
-						<div className="flex-grow border-t border-border/80" />
-						<span className="flex-shrink mx-4 text-xs font-semibold uppercase text-muted-foreground tracking-wider">
-							or
-						</span>
-						<div className="flex-grow border-t border-border/80" />
-					</div>
+					{oauthProviders.length > 0 ? (
+						<>
+							<div className="relative flex items-center my-1">
+								<div className="flex-grow border-t border-border/80" />
+								<span className="flex-shrink mx-4 text-xs font-semibold uppercase text-muted-foreground tracking-wider">
+									or
+								</span>
+								<div className="flex-grow border-t border-border/80" />
+							</div>
 
-					<GoogleSignIn />
+							<GoogleSignIn providers={oauthProviders} />
+						</>
+					) : null}
 				</div>
 			</CardContent>
 		</>

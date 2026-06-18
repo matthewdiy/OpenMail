@@ -25,6 +25,35 @@ export function getAuthResendFrom() {
 	return process.env.AUTH_RESEND_FROM?.trim() || defaultAuthResendFrom;
 }
 
+export function isGoogleOAuthEnabled() {
+	return Boolean(process.env.GOOGLE_CLIENT_ID?.trim() && process.env.GOOGLE_CLIENT_SECRET?.trim());
+}
+
+export function isGitHubOAuthEnabled() {
+	return Boolean(process.env.GITHUB_CLIENT_ID?.trim() && process.env.GITHUB_CLIENT_SECRET?.trim());
+}
+
+function getSocialProviders() {
+	return {
+		...(isGoogleOAuthEnabled()
+			? {
+				google: {
+					clientId: process.env.GOOGLE_CLIENT_ID?.trim() ?? "",
+					clientSecret: process.env.GOOGLE_CLIENT_SECRET?.trim() ?? "",
+				},
+			}
+			: {}),
+		...(isGitHubOAuthEnabled()
+			? {
+				github: {
+					clientId: process.env.GITHUB_CLIENT_ID?.trim() ?? "",
+					clientSecret: process.env.GITHUB_CLIENT_SECRET?.trim() ?? "",
+				},
+			}
+			: {}),
+	};
+}
+
 function getAuthDb() {
 	if (process.env.BETTER_AUTH_CLI) {
 		return drizzle({} as D1Database);
@@ -114,12 +143,7 @@ export function createAuth() {
 				},
 			},
 		},
-		socialProviders: {
-			google: {
-				clientId: process.env.GOOGLE_CLIENT_ID ?? "",
-				clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
-			},
-		},
+		socialProviders: getSocialProviders(),
 		emailAndPassword: {
 			enabled: isEmailPasswordLoginEnabled(),
 			requireEmailVerification: authResendVerificationEnabled,

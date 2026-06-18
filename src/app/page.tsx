@@ -9,6 +9,8 @@ import {
 	getAuth,
 	isAuthResendVerificationEnabled,
 	isEmailPasswordLoginEnabled,
+	isGitHubOAuthEnabled,
+	isGoogleOAuthEnabled,
 } from "@/lib/auth";
 
 type HomePageProps = {
@@ -41,6 +43,10 @@ export default async function Home({ searchParams }: HomePageProps) {
 		: null;
 	const enableEmailPasswordLogin = isEmailPasswordLoginEnabled();
 	const requireEmailVerification = isAuthResendVerificationEnabled();
+	const oauthProviders = [
+		...(isGoogleOAuthEnabled() ? (["google"] as const) : []),
+		...(isGitHubOAuthEnabled() ? (["github"] as const) : []),
+	];
 
 	return (
 		<div className="relative min-h-screen bg-background text-foreground overflow-hidden selection:bg-primary/20">
@@ -120,9 +126,14 @@ export default async function Home({ searchParams }: HomePageProps) {
 								<EmailPasswordAuthForm
 									initialError={initialError}
 									requireEmailVerification={requireEmailVerification}
+									oauthProviders={[...oauthProviders]}
 								/>
 							) : (
-								<GoogleSignIn initialError={initialError} showHeader />
+								<GoogleSignIn
+									initialError={initialError}
+									showHeader
+									providers={[...oauthProviders]}
+								/>
 							)}
 						</div>
 					</Card>
