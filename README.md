@@ -1,47 +1,101 @@
-# OpenNext Starter
+# OpenMail
 
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+[![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=nextdotjs)](https://nextjs.org/)
+[![Cloudflare Workers](https://img.shields.io/badge/Cloudflare-Workers-F38020?logo=cloudflare&logoColor=white)](https://workers.cloudflare.com/)
+[![Better Auth](https://img.shields.io/badge/Auth-Better%20Auth-111827)](https://www.better-auth.com/)
+[![pnpm](https://img.shields.io/badge/package-pnpm-F69220?logo=pnpm&logoColor=white)](https://pnpm.io/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-## Getting Started
+OpenMail is an open source email app for receiving, storing, and managing linked email addresses on Cloudflare. It runs a Next.js web app on Cloudflare Workers, receives inbound mail through Cloudflare Email Routing, stores metadata in D1, and keeps raw messages in R2.
 
-Read the documentation at https://opennext.js.org/cloudflare.
+<div style="overflow-x: auto; white-space: nowrap;">
+  <img src="docs/images/inbox.png" alt="Inbox" width="800" style="display: inline-block;" />
+  <img src="docs/images/setting.png" alt="Settings" width="800" style="display: inline-block;" />
+  <img src="docs/images/admin-setting.png" alt="Admin Settings" width="800" style="display: inline-block;" />
+</div>
 
-## Develop
+## Features
 
-Run the Next.js development server:
+- Cloudflare-native deployment with Workers, D1, R2, and Email Routing.
+- Inbox for linked receiving addresses.
+- Outbound email sending via Resend or any SMTP-compatible server.
+- Temporary email addresses with Web UI and API support, automatic expiration, and cleanup.
+- Raw email storage and viewing for original message inspection.
+- Optional Google and GitHub OAuth login.
+- Optional email/password login with Resend verification.
+- Optional Cloudflare AI classification and summaries for incoming mail.
+- Admin settings for domain and mail-provider configuration.
+- API keys and REST endpoints to list, read, and delete emails programmatically.
+- Rerunnable Cloudflare installer for beginner-friendly setup.
+
+## Documentation
+
+- [Deployment guide](docs/deployment.md): deploy OpenMail to Cloudflare, configure resources, and get provider keys.
+- [Config guide](docs/deployment.md#3-which-config-do-you-need): decide which auth, Resend, and Cloudflare AI env vars you need.
+- [Usage guide](docs/usage.md): sign in, link addresses, read mail, manage settings, and operate the app.
+- [API guide](docs/api.md): API key authentication and mail endpoint documentation.
+
+## Quick Start
+
+Install dependencies:
 
 ```bash
-npm run dev
-# or similar package manager command
+pnpm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Run the development server:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+pnpm dev
+```
 
-## Preview
+Open [http://localhost:10000](http://localhost:10000) with your browser.
+
+## Deploy
+
+The recommended path is the Cloudflare installer:
+
+```bash
+cp .env.example .env.prod
+pnpm install:cloudflare:dry-run
+pnpm install:cloudflare
+```
+
+For the full walkthrough, see [docs/deployment.md](docs/deployment.md).
+
+Quick deploy command for an already configured project:
+
+```bash
+pnpm worker:deploy
+pnpm email-worker:deploy
+```
+
+## Local Cloudflare Preview
 
 Preview the application locally on the Cloudflare runtime:
 
 ```bash
-npm run preview
-# or similar package manager command
+pnpm preview
 ```
 
-## Deploy
+## Tech Stack
 
-Deploy the application to Cloudflare:
+- Next.js and React for the web app.
+- Better Auth for authentication.
+- Drizzle ORM with Cloudflare D1.
+- Cloudflare R2 for raw email objects.
+- Cloudflare Email Routing and a dedicated email worker for inbound mail.
+- Tailwind CSS and shadcn-style UI components.
+
+## Contributing
+
+Issues and pull requests are welcome. Before opening a PR, run the relevant checks:
 
 ```bash
-npm run deploy
-# or similar package manager command
+pnpm build
+git diff --check
 ```
 
-## Learn More
+## License
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Distributed under the MIT License. See [LICENSE](LICENSE) for more info.
