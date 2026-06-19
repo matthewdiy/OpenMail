@@ -8,6 +8,8 @@
 		"build": "next build --webpack",
 		"start": "next start",
 		"lint": "next lint",
+		"install:cloudflare": "node ./scripts/install-cloudflare.mjs",
+		"install:cloudflare:dry-run": "node ./scripts/install-cloudflare.mjs --dry-run",
 		"auth:generate": "BETTER_AUTH_CLI=1 pnpm dlx auth@latest generate --config ./src/lib/auth.ts --output ./src/lib/auth-schema.ts --yes",
 		"db:generate": "drizzle-kit generate --config ./drizzle.config.ts",
 		"db:migrate": "wrangler d1 migrations apply mail-db",
@@ -18,7 +20,7 @@
 		"email-worker:preview": "wrangler dev --config ./wrangler.email.jsonc --remote",
 		"email-worker:upload": "wrangler versions upload --config ./wrangler.email.jsonc",
 		"email-worker:deploy": "wrangler deploy --config ./wrangler.email.jsonc",
-		"deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
+		"worker:deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
 		"upload": "opennextjs-cloudflare build && opennextjs-cloudflare upload",
 		"preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
 		"cf-typegen": "wrangler types --env-interface CloudflareEnv ./cloudflare-env.d.ts"
