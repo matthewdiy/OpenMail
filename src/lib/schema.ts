@@ -67,6 +67,8 @@ export const sentEmails = sqliteTable(
 		from_addr: text("from_addr").notNull(),
 		to_addr: text("to_addr").notNull(),
 		subject: text("subject"),
+		text: text("text"),
+		html: text("html"),
 		snippet: text("snippet"),
 		received_at: text("received_at").notNull(), // using received_at to match EmailRow interface shape
 	},
@@ -87,6 +89,7 @@ export const draftEmails = sqliteTable(
 		to_addr: text("to_addr"),
 		subject: text("subject"),
 		text: text("text"),
+		html: text("html"),
 		updated_at: text("updated_at").notNull(),
 	},
 	(table) => ({

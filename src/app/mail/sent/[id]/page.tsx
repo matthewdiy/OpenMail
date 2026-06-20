@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { SanitizedEmailContent } from "@/components/mail/sanitized-email-content";
 import { getAuth } from "@/lib/auth";
 import { getSentEmailByIdForAddress, resolveActiveEmailAddress } from "@/lib/mail-store";
 
@@ -69,9 +70,10 @@ export default async function SentMailDetailPage({
 					</div>
 				</div>
 				<Separator className="my-6 bg-gray-100 dark:bg-gray-800" />
-				<p className="whitespace-pre-wrap text-sm text-gray-700 dark:text-gray-300">
-					{email.snippet || "No body preview available for this sent message."}
-				</p>
+				<SanitizedEmailContent
+					html={email.html ?? undefined}
+					text={email.text || email.snippet || "No body preview available for this sent message."}
+				/>
 			</div>
 		</>
 	);

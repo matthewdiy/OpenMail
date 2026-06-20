@@ -8,7 +8,7 @@ import {
 	getEmailObject,
 	resolveActiveEmailAddress,
 } from "@/lib/mail-store";
-import { parseRawEmailBuffer, stripHtml } from "@/lib/email-parser";
+import { htmlToText, parseRawEmailBuffer } from "@/lib/email-parser";
 
 export const revalidate = 0;
 
@@ -19,6 +19,12 @@ type InitialComposePayload = {
 	to: string;
 	subject: string;
 	text: string;
+	html: string;
+};
+
+type SourceBody = {
+	text: string;
+	html: string;
 };
 
 function normalizeComposeMode(value?: string): ComposeMode | null {
@@ -47,6 +53,19 @@ function quotePlainText(text: string) {
 		.join("\n");
 }
 
+function escapeHtml(value: string) {
+	return value
+		.replace(/&/g, "&amp;")
+		.replace(/</g, "&lt;")
+		.replace(/>/g, "&gt;")
+		.replace(/"/g, "&quot;")
+		.replace(/'/g, "&#39;");
+}
+
+function plainTextToHtml(text: string) {
+	return escapeHtml(text).replace(/\r?\n/g, "<br>");
+}
+
 function withPrefix(subject: string | null | undefined, mode: ComposeMode) {
 	const base = subject?.trim() || "(no subject)";
 	if (mode === "reply") {
@@ -55,29 +74,47 @@ function withPrefix(subject: string | null | undefined, mode: ComposeMode) {
 	return /^(fwd|fw):/i.test(base) ? base : `Fwd: ${base}`;
 }
 
-async function getSourceBodyText(r2Key: string | null | undefined, snippet: string | null | undefined) {
+async function getSourceBody(r2Key: string | null | undefined, snippet: string | null | undefined): Promise<SourceBody> {
+	const fallbackText = snippet?.trim() || "";
 	if (!r2Key) {
-		return snippet?.trim() || "";
+		return {
+			text: fallbackText,
+			html: fallbackText ? plainTextToHtml(fallbackText) : "",
+		};
 	}
 
 	try {
 		const r2Object = await getEmailObject(r2Key);
 		if (!r2Object) {
-			return snippet?.trim() || "";
+			return {
+				text: fallbackText,
+				html: fallbackText ? plainTextToHtml(fallbackText) : "",
+			};
 		}
 
 		const rawBuffer = await r2Object.arrayBuffer();
 		const parsed = await parseRawEmailBuffer(rawBuffer);
-		const parsedText = parsed.text?.trim() || (parsed.html ? stripHtml(parsed.html) : "").trim();
-		if (parsedText) {
-			return parsedText;
+		const html = parsed.html?.trim() || "";
+		const text = parsed.text?.trim() || (html ? htmlToText(html) : "").trim();
+		if (text || html) {
+			return {
+				text,
+				html: html || plainTextToHtml(text),
+			};
 		}
 
 		const rawPreview = new TextDecoder().decode(rawBuffer.slice(0, 50_000));
-		return extractBody(rawPreview).trim() || snippet?.trim() || "";
+		const rawText = extractBody(rawPreview).trim() || fallbackText;
+		return {
+			text: rawText,
+			html: rawText ? plainTextToHtml(rawText) : "",
+		};
 	} catch (error) {
 		console.error("Failed to parse source email for compose prefill:", error);
-		return snippet?.trim() || "";
+		return {
+			text: fallbackText,
+			html: fallbackText ? plainTextToHtml(fallbackText) : "",
+		};
 	}
 }
 
@@ -91,16 +128,28 @@ async function buildInitialComposeFromSource(
 		return null;
 	}
 
-	const sourceText = await getSourceBodyText(source.r2_key, source.snippet);
+	const sourceBody = await getSourceBody(source.r2_key, source.snippet);
+	const sourceText = sourceBody.text || (sourceBody.html ? htmlToText(sourceBody.html) : "");
+	const sourceHtml = sourceBody.html || (sourceText ? plainTextToHtml(sourceText) : "");
 	const quotedSource = sourceText ? quotePlainText(sourceText) : "> ";
 	const subject = withPrefix(source.subject, mode);
+	const replyIntroText = `On ${formatTimestamp(source.received_at)}, ${source.from_addr} wrote:`;
+	const replyIntroHtml = escapeHtml(replyIntroText);
+	const forwardedMetadataHtml = [
+		"<div>---------- Forwarded message ----------</div>",
+		`<div><strong>From:</strong> ${escapeHtml(source.from_addr)}</div>`,
+		`<div><strong>Date:</strong> ${escapeHtml(formatTimestamp(source.received_at))}</div>`,
+		`<div><strong>Subject:</strong> ${escapeHtml(source.subject || "(no subject)")}</div>`,
+		`<div><strong>To:</strong> ${escapeHtml(source.to_addr)}</div>`,
+	].join("");
 
 	if (mode === "reply") {
 		return {
 			intent: "reply",
 			to: source.from_addr,
 			subject,
-			text: `\n\nOn ${formatTimestamp(source.received_at)}, ${source.from_addr} wrote:\n${quotedSource}`,
+			text: `\n\n${replyIntroText}\n${quotedSource}`,
+			html: `<div><br></div><div><br></div><div>${replyIntroHtml}</div><blockquote style="margin:0 0 0 0.8ex;border-left:1px solid #ccc;padding-left:1ex;">${sourceHtml}</blockquote>`,
 		};
 	}
 
@@ -109,6 +158,7 @@ async function buildInitialComposeFromSource(
 		to: "",
 		subject,
 		text: `\n\n---------- Forwarded message ----------\nFrom: ${source.from_addr}\nDate: ${formatTimestamp(source.received_at)}\nSubject: ${source.subject || "(no subject)"}\nTo: ${source.to_addr}\n\n${quotedSource}`,
+		html: `<div><br></div><div><br></div>${forwardedMetadataHtml}<div><br></div>${sourceHtml}`,
 	};
 }
 
@@ -174,6 +224,7 @@ export default async function ComposePage({
 				to: draft.to_addr ?? "",
 				subject: draft.subject ?? "",
 				text: draft.text ?? "",
+				html: draft.html ?? "",
 			} : null}
 			initialCompose={initialCompose}
 		/>

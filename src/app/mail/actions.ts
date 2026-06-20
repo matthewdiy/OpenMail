@@ -159,6 +159,8 @@ export async function sendEmailAction(formData: {
 		from_addr: from,
 		to_addr: to,
 		subject: subject || null,
+		text: text || null,
+		html: html || null,
 		snippet: text ? text.slice(0, 160) : "",
 		received_at: new Date().toISOString(),
 	}).run();
@@ -188,6 +190,7 @@ export async function saveDraftAction(formData: {
 	to?: string;
 	subject?: string;
 	text?: string;
+	html?: string;
 }) {
 	const reqHeaders = await headers();
 	const session = await getAuth().api.getSession({ headers: reqHeaders });
@@ -214,6 +217,7 @@ export async function saveDraftAction(formData: {
 		to_addr: formData.to?.trim() || null,
 		subject: formData.subject?.trim() || null,
 		text: formData.text?.trim() || null,
+		html: formData.html?.trim() || null,
 		updated_at: now,
 	};
 

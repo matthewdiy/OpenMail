@@ -120,6 +120,13 @@
       "when": 1781748089164,
       "tag": "0016_stale_gambit",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "6",
+      "when": 1781880625658,
+      "tag": "0017_cultured_satana",
+      "breakpoints": true
     }
   ]
 }

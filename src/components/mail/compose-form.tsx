@@ -1,6 +1,7 @@
 "use client";
 import * as React from "react";
 import { useRouter } from "next/navigation";
+import DOMPurify from "dompurify";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { saveDraftAction, sendEmailAction } from "@/app/mail/actions";
@@ -13,12 +14,14 @@ interface ComposeFormProps {
 		to: string;
 		subject: string;
 		text: string;
+		html: string;
 	} | null;
 	initialCompose: {
 		intent: "reply" | "forward";
 		to: string;
 		subject: string;
 		text: string;
+		html: string;
 	} | null;
 }
 
@@ -30,9 +33,23 @@ export function ComposeForm({ fromAddress, draft, initialCompose }: ComposeFormP
 	const [error, setError] = React.useState<string | null>(null);
 	const [info, setInfo] = React.useState<string | null>(null);
 	const [currentDraftId, setCurrentDraftId] = React.useState<string | null>(draft?.id ?? null);
+	const editorRef = React.useRef<HTMLDivElement>(null);
+	const textInputRef = React.useRef<HTMLInputElement>(null);
+	const htmlInputRef = React.useRef<HTMLInputElement>(null);
 	const toDefaultValue = draft?.to ?? initialCompose?.to ?? "";
 	const subjectDefaultValue = draft?.subject ?? initialCompose?.subject ?? "";
 	const textDefaultValue = draft?.text ?? initialCompose?.text ?? "";
+	const htmlDefaultValue = draft?.html ?? initialCompose?.html ?? "";
+	const editorDefaultHtml = React.useMemo(() => {
+		const fallbackHtml = textDefaultValue
+			.replace(/&/g, "&amp;")
+			.replace(/</g, "&lt;")
+			.replace(/>/g, "&gt;")
+			.replace(/\r?\n/g, "<br>");
+		return DOMPurify.sanitize(htmlDefaultValue || fallbackHtml, {
+			USE_PROFILES: { html: true },
+		});
+	}, [htmlDefaultValue, textDefaultValue]);
 	const title = currentDraftId
 		? "Edit Draft"
 		: initialCompose?.intent === "reply"
@@ -50,6 +67,33 @@ export function ComposeForm({ fromAddress, draft, initialCompose }: ComposeFormP
 		return `/mail/compose?${params.toString()}`;
 	}, [fromAddress]);
 
+	const syncBodyFields = React.useCallback((normalizeEditor = false) => {
+		if (!editorRef.current || !textInputRef.current || !htmlInputRef.current) {
+			return { text: "", html: "" };
+		}
+
+		const html = DOMPurify.sanitize(editorRef.current.innerHTML, {
+			USE_PROFILES: { html: true },
+		}).trim();
+		const text = editorRef.current.innerText.trim();
+		if (normalizeEditor) {
+			editorRef.current.innerHTML = html;
+		}
+		textInputRef.current.value = text;
+		htmlInputRef.current.value = html;
+		return { text, html };
+	}, []);
+
+	const handlePaste = React.useCallback((event: React.ClipboardEvent<HTMLDivElement>) => {
+		event.preventDefault();
+		const html = event.clipboardData.getData("text/html");
+		const text = event.clipboardData.getData("text/plain");
+		const safeHtml = html
+			? DOMPurify.sanitize(html, { USE_PROFILES: { html: true } })
+			: text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\r?\n/g, "<br>");
+		document.execCommand("insertHTML", false, safeHtml);
+	}, []);
+
 	const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
 		setLoading(true);
@@ -59,7 +103,7 @@ export function ComposeForm({ fromAddress, draft, initialCompose }: ComposeFormP
 		const formData = new FormData(e.currentTarget);
 		const to = formData.get("to") as string;
 		const subject = formData.get("subject") as string;
-		const text = formData.get("text") as string;
+		const { text, html } = syncBodyFields(true);
 
 		if (!to || !subject || !text) {
 			setError("Please fill in all fields.");
@@ -73,7 +117,7 @@ export function ComposeForm({ fromAddress, draft, initialCompose }: ComposeFormP
 				to,
 				subject,
 				text,
-				html: undefined,
+				html,
 				draftId: currentDraftId ?? undefined,
 			});
 			router.push(`/mail?email=${encodeURIComponent(fromAddress)}`);
@@ -91,13 +135,15 @@ export function ComposeForm({ fromAddress, draft, initialCompose }: ComposeFormP
 		setInfo(null);
 
 		const formData = new FormData(formRef.current);
+		const { text, html } = syncBodyFields(true);
 		try {
 			const result = await saveDraftAction({
 				draftId: currentDraftId ?? undefined,
 				from: fromAddress,
 				to: String(formData.get("to") ?? ""),
 				subject: String(formData.get("subject") ?? ""),
-				text: String(formData.get("text") ?? ""),
+				text,
+				html,
 			});
 			setCurrentDraftId(result.draftId);
 			setInfo("Draft saved.");
@@ -188,13 +234,22 @@ export function ComposeForm({ fromAddress, draft, initialCompose }: ComposeFormP
 				</div>
 
 				<div className="flex flex-1 flex-col gap-1 mt-2">
-					<textarea 
-						id="text" 
-						name="text" 
-						placeholder="Write your email here..." 
-						defaultValue={textDefaultValue}
-						className="flex-1 w-full resize-none border-0 p-0 focus:outline-none focus:ring-0 text-sm bg-transparent placeholder-gray-400 dark:placeholder-gray-500" 
-						required 
+					<input ref={textInputRef} type="hidden" name="text" defaultValue={textDefaultValue} />
+					<input ref={htmlInputRef} type="hidden" name="html" defaultValue={htmlDefaultValue} />
+					<div
+						id="message-body"
+						ref={editorRef}
+						contentEditable
+						role="textbox"
+						aria-label="Message body"
+						aria-multiline="true"
+						data-placeholder="Write your email here..."
+						onBlur={() => syncBodyFields(true)}
+						onInput={() => syncBodyFields()}
+						onPaste={handlePaste}
+						className="flex-1 w-full overflow-y-auto border-0 p-0 text-sm bg-transparent focus:outline-none empty:before:content-[attr(data-placeholder)] empty:before:text-gray-400 dark:empty:before:text-gray-500 [&_blockquote]:border-l [&_blockquote]:border-gray-300 [&_blockquote]:pl-3 [&_blockquote]:text-gray-600 dark:[&_blockquote]:border-gray-700 dark:[&_blockquote]:text-gray-300 [&_a]:text-blue-600 [&_a]:underline [&_img]:max-w-full [&_img]:h-auto"
+						suppressContentEditableWarning
+						dangerouslySetInnerHTML={{ __html: editorDefaultHtml }}
 					/>
 				</div>
 			</div>

@@ -567,28 +567,53 @@ function selectedSecrets(env, keys) {
 		.map((key) => [key, env[key].trim()]);
 }
 
-function putSecret(configFile, key, value, options) {
+function deleteSecret(configFile, key) {
+	const result = spawnSync("pnpm", ["exec", "wrangler", "secret", "delete", key, "--config", configFile], {
+		cwd: process.cwd(),
+		encoding: "utf8",
+		stdio: "pipe",
+		input: "y\n",
+		env: {
+			...process.env,
+		},
+	});
+	if (result.status === 0) return true;
+	const outputText = `${result.stdout ?? ""}\n${result.stderr ?? ""}`;
+	if (/does not exist|not found|could not find/i.test(outputText)) {
+		return false;
+	}
+	if (result.stderr?.trim()) console.error(result.stderr.trim());
+	throw new Error(`Command failed: pnpm exec wrangler secret delete ${key} --config ${configFile}`);
+}
+
+function putSecretsBulk(configFile, secrets, options) {
+	if (secrets.length === 0) return;
+	const secretNames = secrets.map(([key]) => key).join(", ");
 	if (options.dryRun) {
-		console.log(`Dry run: would set ${key} on ${configFile}.`);
+		console.log(`Dry run: would delete and set ${secretNames} on ${configFile}.`);
 		return;
 	}
-	run("pnpm", ["exec", "wrangler", "secret", "put", key, "--config", configFile], {
-		input: `${value}\n`,
+	const deletedSecrets = [];
+	for (const [key] of secrets) {
+		if (deleteSecret(configFile, key)) deletedSecrets.push(key);
+	}
+	if (deletedSecrets.length > 0) {
+		console.log(`Deleted existing secrets on ${configFile}: ${deletedSecrets.join(", ")}.`);
+	}
+	const payload = Object.fromEntries(secrets);
+	run("pnpm", ["exec", "wrangler", "secret", "bulk", "--config", configFile], {
+		input: `${JSON.stringify(payload)}\n`,
 		printStdout: false,
 	});
-	console.log(`Set ${key} on ${configFile}.`);
+	console.log(`Set ${secrets.length} secret${secrets.length === 1 ? "" : "s"} on ${configFile}: ${secretNames}.`);
 }
 
 function uploadSecrets(env, options) {
 	const webSecrets = selectedSecrets(env, WEB_SECRETS);
 	const emailSecrets = selectedSecrets(env, EMAIL_WORKER_SECRETS);
 
-	for (const [key, value] of webSecrets) {
-		putSecret(WEB_CONFIG, key, value, options);
-	}
-	for (const [key, value] of emailSecrets) {
-		putSecret(EMAIL_CONFIG, key, value, options);
-	}
+	putSecretsBulk(WEB_CONFIG, webSecrets, options);
+	putSecretsBulk(EMAIL_CONFIG, emailSecrets, options);
 	if (emailSecrets.length === 0) {
 		console.log("Cloudflare AI secrets not provided; skipping email worker AI secrets.");
 	}
@@ -649,8 +674,8 @@ async function main() {
 	patchWranglerConfig(WEB_CONFIG, databaseId, resourceNames, env, options);
 	patchWranglerConfig(EMAIL_CONFIG, databaseId, resourceNames, env, options);
 	applyMigrations(resourceNames, options);
-	uploadSecrets(env, options);
 	deployWorkers(options);
+	uploadSecrets(env, options);
 	printCompletion(env, resourceNames, options);
 }
 
